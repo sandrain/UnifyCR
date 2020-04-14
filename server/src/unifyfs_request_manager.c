@@ -50,6 +50,7 @@
 
 #include "int2void.h"
 #include "unifyfs_inode_tree.h"
+#include "unifyfs_collectives.h"
 
 #define RM_LOCK(rm) \
 do { \
@@ -536,6 +537,32 @@ static int client_wait(shm_data_header* hdr)
  * to the request manager thread
  ***********************/
 
+int rm_cmd_filesize(
+    int app_id,    /* app_id for requesting client */
+    int client_id, /* client_id for requesting client */
+    int gfid,      /* global file id of read request */
+    size_t* outsize) /* output file size */
+{
+    
+    size_t filesize = 0;
+    int ret = unifyfs_invoke_filesize_rpc(gfid, &filesize);
+
+    if (ret) {
+        LOGERR("unifyfs_invoke_filesize failed (ret=%d)", ret);
+    }
+
+    LOGDBG("BUCKEYES got a filesize of %llu\n",
+           (unsigned long long) filesize);
+
+    unifyfs_file_attr_t attr = { 0, };
+    unifyfs_inode_metaget(gfid, &attr);
+
+    *outsize = attr.size >filesize ? attr.size : filesize;
+
+    return ret;
+}
+
+#if 0
 /* given an app_id, client_id and global file id,
  * compute and return file size for specified file
  */
@@ -701,6 +728,7 @@ int rm_cmd_filesize(
 //    *outsize = filesize;
     return rc;
 }
+#endif
 
 /* delete any key whose last byte is beyond the specified
  * file size */
@@ -1022,7 +1050,12 @@ int rm_cmd_truncate(
         goto truncate_exit;
     }
 
+    rc = unifyfs_invoke_truncate_rpc(gfid, newsize);
+    if (rc) {
+        LOGERR("truncate rpc failed");
+    }
 
+#if 0
     /* hs; new truncate code */
     // TODO: protect these structures from concurrent rpcs with locking
     int tag = unifyfs_stack_pop(glb_tag_stack);
@@ -1073,6 +1106,7 @@ int rm_cmd_truncate(
     unifyfs_stack_push(glb_tag_stack, st->tag);
     unifyfs_coll_state_free(&st);
     /* hs; new truncate code */
+#endif
 
 truncate_exit:
 
@@ -1095,6 +1129,12 @@ int rm_cmd_metaset(
 {
     int rc = UNIFYFS_SUCCESS;
 
+    rc = unifyfs_invoke_metaset_rpc(gfid, create, attr);
+    if (rc) {
+        LOGERR("metaset rpc failed (ret=%d)", rc);
+    }
+
+#if 0
     /* hs; new metaset using the collective */
     // TODO: protect these structures from concurrent rpcs with locking
     int tag = unifyfs_stack_pop(glb_tag_stack);
@@ -1146,6 +1186,7 @@ int rm_cmd_metaset(
     unifyfs_stack_push(glb_tag_stack, st->tag);
     unifyfs_coll_state_free(&st);
     /* hs; new metaset code */
+#endif
 
     return rc;
 }
@@ -1186,6 +1227,12 @@ int rm_cmd_unlink(
         rc = ret;
     }
 
+    rc = unifyfs_invoke_unlink_rpc(gfid);
+    if (rc) {
+        LOGERR("unlink rpc failed (ret=%d)", rc);
+    }
+
+#if 0
     /* hs; new unlink using the collective */
     // TODO: protect these structures from concurrent rpcs with locking
     int tag = unifyfs_stack_pop(glb_tag_stack);
@@ -1235,6 +1282,7 @@ int rm_cmd_unlink(
     unifyfs_stack_push(glb_tag_stack, st->tag);
     unifyfs_coll_state_free(&st);
     /* hs; new unlink code */
+#endif
 
     return rc;
 }
@@ -1391,7 +1439,7 @@ int get_local_keyvals(
                     free(keylens_global);
                     free_key_array(keys_global);
                     free(kvs_local);
-                    return (int)UNIFYFS_ERROR_NOMEM;
+                    return ENOMEM;
                 }
 
                 /* first key is for starting offset of the hole,
@@ -1421,7 +1469,7 @@ int get_local_keyvals(
                     free(keylens_global);
                     free_key_array(keys_global);
                     free(kvs_local);
-                    return (int)UNIFYFS_ERROR_NOMEM;
+                    return ENOMEM;
                 }
 
                 /* create a key/value describing the
@@ -1452,7 +1500,7 @@ int get_local_keyvals(
                 free(keylens_global);
                 free_key_array(keys_global);
                 free(kvs_local);
-                return (int)UNIFYFS_ERROR_NOMEM;
+                return ENOMEM;
             }
 
             /* first key is for starting offset of the hole,
@@ -1990,6 +2038,7 @@ int rm_cmd_sync(int app_id, int client_id)
     }
 
     /* create file extent key/values for insertion into MDHIM */
+    int gfid_wrong = 0;
     int count = 0;
     for (i = 0; i < extent_num_entries; i++) {
         /* get file offset, length, and log offset for this entry */
@@ -2017,21 +2066,24 @@ int rm_cmd_sync(int app_id, int client_id)
         current->end = end;
         current->svr_rank = glb_pmi_rank;
         current->app_id = app_id;
-        current->cli_id = client_side_id;
+        current->cli_id = client_id;
         current->pos = (unsigned long) logpos;
+
+        /* TODO: using the gfid of the last entry for the gfid below (buggy hack)*/
+        gfid_wrong = gfid;
     }
 
-    ret = unifyfs_inode_add_local_extents(gfid,
+    ret = unifyfs_inode_add_local_extents(gfid_wrong,
                                           extent_num_entries, local_extents);
     if (ret) {
         LOGERR("failed to add local extent to inode (gfid=%d, ret=%d)",
-                gfid, ret);
+                gfid_wrong, ret);
         goto rm_cmd_fsync_exit;
     }
 
     /* distribute the extend tree */
     //ret = unifyfs_distribute_extend_tree(gfid);
-    ret = unifyfs_broadcast_extent_tree(gfid);
+    ret = unifyfs_broadcast_extent_tree(gfid_wrong);
     if (UNIFYFS_SUCCESS != ret) {
         LOGERR("Error distributing extend tree");
         goto rm_cmd_fsync_exit;
