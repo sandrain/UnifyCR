@@ -10,6 +10,8 @@
 #include <mercury_proc_string.h>
 #include <mercury_types.h>
 
+#include "unifyfs_rpc_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -66,6 +68,64 @@ MERCURY_GEN_PROC(chunk_read_response_in_t,
 MERCURY_GEN_PROC(chunk_read_response_out_t,
                  ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(chunk_read_response_rpc)
+
+/* server collective operations: */
+
+/* extbcast_request_rpc (server => server)
+ *
+ * initiates extbcast request operation */
+MERCURY_GEN_PROC(extbcast_request_in_t,
+        ((int32_t)(root))
+        ((int32_t)(gfid))
+        ((int32_t)(num_extends))
+        ((hg_bulk_t)(exttree)))
+MERCURY_GEN_PROC(extbcast_request_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(extbcast_request_rpc)
+
+/*
+ * filesize (server => server)
+ */
+MERCURY_GEN_PROC(filesize_in_t,
+                 ((int32_t)(root))
+                 ((int32_t)(gfid)))
+MERCURY_GEN_PROC(filesize_out_t,
+                 ((hg_size_t)(filesize))
+                 ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(filesize_rpc)
+
+/*
+ * truncate (server => server)
+ */
+MERCURY_GEN_PROC(truncate_in_t,
+                 ((int32_t)(root))
+                 ((int32_t)(gfid))
+                 ((hg_size_t)(filesize)))
+MERCURY_GEN_PROC(truncate_out_t,
+                 ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(truncate_rpc)
+
+/*
+ * metaset (server => server)
+ */
+MERCURY_GEN_PROC(metaset_in_t,
+                 ((int32_t)(root))
+                 ((int32_t)(gfid))
+                 ((int32_t)(create))
+                 ((unifyfs_file_attr_t)(attr)))
+MERCURY_GEN_PROC(metaset_out_t,
+                 ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(metaset_rpc)
+
+/*
+ * unlink (server => server)
+ */
+MERCURY_GEN_PROC(unlink_in_t,
+                 ((int32_t)(root))
+                 ((int32_t)(gfid)))
+MERCURY_GEN_PROC(unlink_out_t,
+                 ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(unlink_rpc)
 
 #ifdef __cplusplus
 } // extern "C"

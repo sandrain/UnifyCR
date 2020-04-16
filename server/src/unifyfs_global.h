@@ -49,6 +49,7 @@
 #include "unifyfs_logio.h"
 #include "unifyfs_meta.h"
 #include "unifyfs_shm.h"
+#include "unifyfs_inode_tree.h"
 
 #include <margo.h>
 #include <pthread.h>
@@ -78,6 +79,7 @@ typedef struct {
 extern server_info_t* glb_servers; /* array of server info structs */
 extern size_t glb_num_servers; /* number of entries in glb_servers array */
 
+extern struct unifyfs_inode_tree* global_inode_tree; /* global inode tree */
 
 /* defines commands for messages sent to service manager threads */
 typedef enum {

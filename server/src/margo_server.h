@@ -20,6 +20,11 @@ typedef struct ServerRpcIds {
     hg_id_t request_id;
     hg_id_t chunk_read_request_id;
     hg_id_t chunk_read_response_id;
+    hg_id_t extbcast_request_id;
+    hg_id_t filesize_id;
+    hg_id_t truncate_id;
+    hg_id_t metaset_id;
+    hg_id_t unlink_id;
 } server_rpcs_t;
 
 typedef struct ServerRpcContext {
