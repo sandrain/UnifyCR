@@ -24,6 +24,16 @@ libunifyfsd_a_SOURCES = \
     unifyfs_service_manager.c \
     unifyfs_service_manager.h
 
+if FALSE
+    libunifyfsd_a_SOURCES += \
+        unifyfs_metadata_mdhim.c \
+        unifyfs_metadata_mdhim.h
+else
+    libunifyfsd_a_SOURCES += \
+        unifyfs_metadata_segment_tree.c \
+        unifyfs_metadata_segment_tree.h
+endif
+
 bin_PROGRAMS = unifyfsd
 
 unifyfsd_SOURCES = unifyfs_server.c

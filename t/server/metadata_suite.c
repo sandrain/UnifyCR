@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    rc = meta_init_store(&server_cfg);
+    rc = unifyfs_meta_init(&server_cfg);
     if (rc != 0) {
         LOG(LOG_ERR, "%s",
             unifyfs_rc_enum_description(UNIFYFS_ERROR_META));
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
      */
 
     // shutdown the metadata service
-    meta_sanitize();
+    unifyfs_meta_finalize();
 
     // finish the testing
     // needs to be last call

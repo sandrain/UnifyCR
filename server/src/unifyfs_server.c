@@ -587,9 +587,9 @@ static int unifyfs_exit(void)
     LOGDBG("stopping rpc service");
     margo_server_rpc_finalize();
 
-    /* shutdown the metadata service*/
     LOGDBG("stopping metadata service");
-    meta_sanitize();
+    unifyfs_meta_finalize();
+
 
 #if defined(UNIFYFSD_USE_MPI)
     LOGDBG("finalizing MPI");

@@ -181,5 +181,14 @@ int unifyfs_inode_span_extents(
  */
 int unifyfs_inode_dump(int gfid);
 
+/**
+ * @brief returns pointer to inode
+ *
+ * @param gfid global file identifier
+ *
+ * @return UNIFYFS_SUCCESS on success, errno otherwise
+ */
+int unifyfs_inode_get(int gfid, struct unifyfs_inode** inode);
+
 #endif /* __UNIFYFS_INODE_H */
 

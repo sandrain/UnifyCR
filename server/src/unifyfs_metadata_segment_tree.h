@@ -33,8 +33,6 @@
 #include "unifyfs_configurator.h"
 #include "unifyfs_global.h"
 
-#define MANIFEST_FILE_NAME "mdhim_manifest_"
-
 
 /* extent slice size used for metadata */
 extern size_t meta_slice_sz;
@@ -78,46 +76,8 @@ typedef struct {
     unifyfs_val_t val;
 } unifyfs_keyval_t;
 
-// metadata operation types
-typedef int (*unifyfs_metaops_init_t)(unifyfs_cfg_t *cfg);
-typedef int (*unifyfs_metaops_finalize_t)();
-typedef int (*unifyfs_metaops_get_file_attribute_t)(int gfid, unifyfs_file_attr_t *ptr_attr_val);
-typedef int (*unifyfs_metaops_delete_file_attribute_t)(int gfid);
-typedef int (*unifyfs_metaops_set_file_attribute_t)(int size_flag,
-                                                    int laminate_flag,
-                                                    unifyfs_file_attr_t *ptr_attr_val);
-typedef int (*unifyfs_metaops_get_file_extents_t)(int num_keys,
-                                                  unifyfs_key_t **keys, int *key_lens,
-                                                  int *num_values, unifyfs_keyval_t **keyval);
-typedef int (*unifyfs_metaops_delete_file_extents_t)(int num_entries,
-                                                     unifyfs_key_t **keys, int *key_lens);
-typedef int (*unifyfs_metaops_set_file_extents_t)(int num_entries, unifyfs_key_t **keys,
-                                                  int *key_lens, unifyfs_val_t **vals,
-                                                  int *val_lens);
-
-// metadata operations
-struct unifyfs_metaops {
-    unifyfs_metaops_init_t init;
-    unifyfs_metaops_finalize_t finalize;
-    unifyfs_metaops_get_file_attribute_t get_file_attribute;
-    unifyfs_metaops_delete_file_attribute_t delete_file_attribute;
-    unifyfs_metaops_set_file_attribute_t set_file_attribute;
-    unifyfs_metaops_get_file_extents_t get_file_extents;
-    unifyfs_metaops_delete_file_extents_t delete_file_extents;
-    unifyfs_metaops_set_file_extents_t set_file_extents;
-};
-
-int unifyfs_key_compare(unifyfs_key_t* a, unifyfs_key_t* b);
-
-void debug_log_key_val(const char* ctx,
-                       unifyfs_key_t* key,
-                       unifyfs_val_t* val);
-
-int unifyfs_meta_finalize(void);
-int unifyfs_meta_init(unifyfs_cfg_t* cfg);
-
-void print_fsync_indices(unifyfs_key_t** unifyfs_keys,
-                         unifyfs_val_t** unifyfs_vals, size_t num_entries);
+int unifyfs_segtreee_finalize(void);
+int unifyfs_segtreee_init(unifyfs_cfg_t* cfg);
 
 /**
  * Retrieve a File attribute from the KV-Store.
@@ -126,7 +86,7 @@ void print_fsync_indices(unifyfs_key_t** unifyfs_keys,
  * @param[out] *ptr_attr_val
  * @return UNIFYFS_SUCCESS on success
  */
-int unifyfs_get_file_attribute(int gfid,
+int unifyfs_segtreee_get_file_attribute(int gfid,
                                unifyfs_file_attr_t* ptr_attr_val);
 
 /**
@@ -135,7 +95,7 @@ int unifyfs_get_file_attribute(int gfid,
  * @param [in] gfid
  * @return UNIFYFS_SUCCESS on success
  */
-int unifyfs_delete_file_attribute(int gfid);
+int unifyfs_segtreee_delete_file_attribute(int gfid);
 
 /**
  * Store a File attribute to the KV-Store.
@@ -145,25 +105,10 @@ int unifyfs_delete_file_attribute(int gfid);
  * @param[in] *ptr_attr_val
  * @return UNIFYFS_SUCCESS on success
  */
-int unifyfs_set_file_attribute(
+int unifyfs_segtreee_set_file_attribute(
     int size_flag,
     int laminate_flag,
     unifyfs_file_attr_t* ptr_attr_val);
-
-#if 0 // not used?
-/**
- * Store File attributes to the KV-Store.
- *
- * @param[in] num_entries number of key value pairs to store
- * @param[in] keys array storing the keys
- * @param[in] key_lens array with the length of the elements in \p keys
- * @param[in] vals array with the values
- * @param[in] val_lens array with the length of the elements in \p vals
- */
-int unifyfs_set_file_attributes(int num_entries,
-                                fattr_key_t** keys, int* key_lens,
-                                unifyfs_file_attr_t** vals, int* val_lens);
-#endif 
 
 /**
  * Retrieve File extents from the KV-Store.
@@ -175,7 +120,7 @@ int unifyfs_set_file_attributes(int num_entries,
  * @param[out] keyval array containing the key-value tuples found
  * @return UNIFYFS_SUCCESS on success
  */
-int unifyfs_get_file_extents(int num_keys,
+int unifyfs_segtreee_get_file_extents(int num_keys,
                              unifyfs_key_t** keys, int* key_lens,
                              int* num_values, unifyfs_keyval_t** keyval);
 
@@ -186,7 +131,7 @@ int unifyfs_get_file_extents(int num_keys,
  * @param[in] keys array storing the keys
  * @param[in] key_lens array with the length of the elements in \p keys
  */
-int unifyfs_delete_file_extents(int num_entries,
+int unifyfs_segtreee_delete_file_extents(int num_entries,
                                 unifyfs_key_t** keys, int* key_lens);
 
 /**
@@ -199,7 +144,7 @@ int unifyfs_delete_file_extents(int num_entries,
  * @param[in] val_lens array with the length of the elements in \p vals
  * @return UNIFYFS_SUCCESS on success
  */
-int unifyfs_set_file_extents(int num_entries, unifyfs_key_t** keys,
+int unifyfs_segtreee_set_file_extents(int num_entries, unifyfs_key_t** keys,
                              int* key_lens, unifyfs_val_t** vals,
                              int* val_lens);
 

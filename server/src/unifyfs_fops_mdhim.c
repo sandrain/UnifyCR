@@ -33,7 +33,7 @@ static int mdhim_init(unifyfs_cfg_t* cfg)
 
     LOGDBG("initializing file operations..");
 
-    ret = meta_init_store(cfg);
+    ret = unifyfs_meta_init(cfg);
     if (ret) {
         LOGERR("failed to initialize the meta kv store (ret=%d)", ret);
     }

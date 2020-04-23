@@ -526,3 +526,23 @@ out_unlock_tree:
 
     return ret;
 }
+
+int unifyfs_inode_get(int gfid, struct unifyfs_inode** inode) {
+    int ret = UNIFYFS_SUCCESS;
+    struct unifyfs_inode* _inode = NULL;
+
+    unifyfs_inode_tree_rdlock(global_inode_tree);
+    {
+        _inode = unifyfs_inode_tree_search(global_inode_tree, gfid);
+        if (!_inode) {
+            ret = ENOENT;
+            goto out_unlock_tree;
+        }
+    }
+
+    *inode = _inode;
+out_unlock_tree:
+    unifyfs_inode_tree_unlock(global_inode_tree);
+
+    return ret;
+}
