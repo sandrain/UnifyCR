@@ -328,15 +328,17 @@ int unifyfs_sync(int gfid)
         return UNIFYFS_SUCCESS;
     }
 
+#if 0
     /* ensure any data written to the spill over file is flushed */
     int ret = unifyfs_logio_sync(logio_ctx);
     if (ret != UNIFYFS_SUCCESS) {
         LOGERR("failed to sync logio data");
         return EIO;
     }
+#endif
 
     /* tell the server to grab our new extents */
-    ret = invoke_client_sync_rpc();
+    int ret = invoke_client_sync_rpc();
     if (ret != UNIFYFS_SUCCESS) {
         /* something went wrong when trying to flush key/values */
         LOGERR("failed to flush key/value index to server");
@@ -378,7 +380,9 @@ int unifyfs_fid_logio_write(int fid,
     }
 
     /* allocate space in the log for this write */
-    off_t log_off;
+    off_t log_off = 0;
+    int nwritten = 0;
+#if 0
     int rc = unifyfs_logio_alloc(logio_ctx, count, &log_off);
     if (rc != UNIFYFS_SUCCESS) {
         LOGERR("logio_alloc(%zu) failed", count);
@@ -400,8 +404,9 @@ int unifyfs_fid_logio_write(int fid,
         LOGDBG("successful logio_write() @ log offset=%zu (%zu bytes)",
                (size_t)log_off, count);
     }
+#endif
 
     /* update our write metadata for this write */
-    rc = add_write_meta_to_index(meta, pos, log_off, nwritten);
+    int rc = add_write_meta_to_index(meta, pos, log_off, nwritten);
     return rc;
 }

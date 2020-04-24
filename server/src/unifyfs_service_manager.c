@@ -131,7 +131,7 @@ int sm_issue_chunk_reads(int src_rank,
      * byte in our buffer and the data buffer follows
      * the read response array */
     chunk_read_resp_t* resp = (chunk_read_resp_t*)crbuf;
-    char* databuf = crbuf + resp_sz;
+    //char* databuf = crbuf + resp_sz;
 
     /* allocate a struct for the chunk read request */
     remote_chunk_reads_t* rcr = (remote_chunk_reads_t*)
@@ -169,7 +169,7 @@ int sm_issue_chunk_reads(int src_rank,
 
         /* get size and log offset of data we are to read */
         size_t nbytes = rreq->nbytes;
-        size_t log_offset = rreq->log_offset;
+        //size_t log_offset = rreq->log_offset;
 
         /* record request metadata in response */
         rresp->read_rc = 0;
@@ -179,13 +179,14 @@ int sm_issue_chunk_reads(int src_rank,
                rreq->offset, nbytes);
 
         /* get pointer to next position in buffer to store read data */
-        char* buf_ptr = databuf + buf_cursor;
+        //char* buf_ptr = databuf + buf_cursor;
 
         /* read data from client log */
         int app_id = rreq->log_app_id;
         int cli_id = rreq->log_client_id;
         app_clnt = get_app_client(app_id, cli_id);
         if (NULL != app_clnt) {
+#if 0
             logio_context* logio_ctx = app_clnt->logio;
             if (NULL != logio_ctx) {
                 size_t nread = 0;
@@ -199,6 +200,7 @@ int sm_issue_chunk_reads(int src_rank,
             } else {
                 rresp->read_rc = (ssize_t)(-EINVAL);
             }
+#endif
         } else {
             rresp->read_rc = (ssize_t)(-EINVAL);
         }

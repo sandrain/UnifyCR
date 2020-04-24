@@ -126,6 +126,41 @@ static void register_server_server_rpcs(margo_instance_id mid)
         MARGO_REGISTER(mid, "unlink_rpc",
                        unlink_in_t, unlink_out_t,
                        unlink_rpc);
+
+    unifyfsd_rpc_context->rpcs.mds_create_id =
+        MARGO_REGISTER(mid, "mds_create_rpc",
+                       mds_create_in_t, mds_create_out_t,
+                       mds_create_handle_rpc);
+
+    unifyfsd_rpc_context->rpcs.mds_search_id =
+        MARGO_REGISTER(mid, "mds_search_rpc",
+                       mds_search_in_t, mds_search_out_t,
+                       mds_search_handle_rpc);
+
+    unifyfsd_rpc_context->rpcs.mds_fsync_id =
+        MARGO_REGISTER(mid, "mds_fsync_rpc",
+                       mds_fsync_in_t, mds_fsync_out_t,
+                       mds_fsync_handle_rpc);
+
+    unifyfsd_rpc_context->rpcs.mds_filelen_id =
+        MARGO_REGISTER(mid, "mds_filelen_rpc",
+                       mds_filelen_in_t, mds_filelen_out_t,
+                       mds_filelen_handle_rpc);
+
+    unifyfsd_rpc_context->rpcs.mds_addfmap_id =
+        MARGO_REGISTER(mid, "mds_addfmap_rpc",
+                       mds_addfmap_in_t, mds_addfmap_out_t,
+                       mds_addfmap_handle_rpc);
+
+    unifyfsd_rpc_context->rpcs.mds_getfmap_id =
+        MARGO_REGISTER(mid, "mds_getfmap_rpc",
+                       mds_getfmap_in_t, mds_getfmap_out_t,
+                       mds_getfmap_handle_rpc);
+
+    unifyfsd_rpc_context->rpcs.mds_stat_id =
+        MARGO_REGISTER(mid, "mds_stat_rpc",
+                       mds_stat_in_t, mds_stat_out_t,
+                       mds_stat_handle_rpc);
 }
 
 /* setup_local_target - Initializes the client-server margo target */
@@ -219,6 +254,36 @@ static void register_client_server_rpcs(margo_instance_id mid)
     MARGO_REGISTER(mid, "unifyfs_mread_rpc",
                    unifyfs_mread_in_t, unifyfs_mread_out_t,
                    unifyfs_mread_rpc);
+
+#if 0
+    MARGO_REGISTER(mid, "unifyfs_handle_create",
+                   unifyfs_create_in_t, unifyfs_create_out_t,
+                   unifyfs_handle_create);
+
+    MARGO_REGISTER(mid, "unifyfs_handle_search",
+                   unifyfs_search_in_t, unifyfs_search_out_t,
+                   unifyfs_handle_search);
+
+    MARGO_REGISTER(mid, "unifyfs_handle_fsync",
+                   unifyfs_fsync_in_t, unifyfs_fsync_out_t,
+                   unifyfs_handle_fsync);
+
+    MARGO_REGISTER(mid, "unifyfs_handle_filelen",
+                   unifyfs_filelen_in_t, unifyfs_filelen_out_t,
+                   unifyfs_handle_filelen);
+#endif
+
+    MARGO_REGISTER(mid, "unifyfs_handle_lsm_open",
+                   unifyfs_lsm_open_in_t, unifyfs_lsm_open_out_t,
+                   unifyfs_handle_lsm_open);
+
+    MARGO_REGISTER(mid, "unifyfs_handle_lsm_close",
+                   unifyfs_lsm_close_in_t, unifyfs_lsm_close_out_t,
+                   unifyfs_handle_lsm_close);
+
+    MARGO_REGISTER(mid, "unifyfs_handle_lsm_stat",
+                   unifyfs_lsm_stat_in_t, unifyfs_lsm_stat_out_t,
+                   unifyfs_handle_lsm_stat);
 }
 
 /* margo_server_rpc_init

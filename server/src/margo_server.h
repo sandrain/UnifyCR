@@ -25,6 +25,15 @@ typedef struct ServerRpcIds {
     hg_id_t truncate_id;
     hg_id_t metaset_id;
     hg_id_t unlink_id;
+
+    /* localfs test */
+    hg_id_t mds_create_id;
+    hg_id_t mds_search_id;
+    hg_id_t mds_fsync_id;
+    hg_id_t mds_filelen_id;
+    hg_id_t mds_addfmap_id;
+    hg_id_t mds_getfmap_id;
+    hg_id_t mds_stat_id;
 } server_rpcs_t;
 
 typedef struct ServerRpcContext {

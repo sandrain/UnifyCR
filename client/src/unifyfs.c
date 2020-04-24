@@ -53,6 +53,7 @@
 #include "gotcha_map_unifyfs_list.h"
 #endif
 
+#include "unifyfs-storage.h"
 #include "unifyfs_client_rpcs.h"
 #include "unifyfs_server_rpcs.h"
 #include "unifyfs_rpc_util.h"
@@ -101,8 +102,10 @@ int    unifyfs_max_files;  /* maximum number of files to store */
 bool   unifyfs_flatten_writes; /* flatten our writes (true = enabled) */
 bool   unifyfs_local_extents;  /* track data extents in client to read local */
 
+#if 0
 /* log-based I/O context */
 logio_context* logio_ctx;
+#endif
 
 /* keep track of what we've initialized */
 int unifyfs_initialized = 0;
@@ -1775,12 +1778,21 @@ static int unifyfs_init(void)
             return UNIFYFS_FAILURE;
         }
 
+#if 0
         /* initialize log-based I/O context */
         rc = unifyfs_logio_init_client(unifyfs_app_id, unifyfs_client_id,
                                        &client_cfg, &logio_ctx);
         if (rc != UNIFYFS_SUCCESS) {
             LOGERR("failed to initialize log-based I/O (rc = %s)",
                    unifyfs_rc_enum_str(rc));
+            return rc;
+        }
+#endif
+
+        rc = unifyfs_storage_init(client_cfg.logio_spill_dir,
+                                  unifyfs_mount_prefix);
+        if (rc != UNIFYFS_SUCCESS) {
+            LOGERR("Failed to initializa the backend");
             return rc;
         }
 
@@ -1803,12 +1815,14 @@ static int unifyfs_finalize(void)
         return UNIFYFS_FAILURE;
     }
 
+#if 0
     /* close spillover files */
     unifyfs_logio_close(logio_ctx);
     if (unifyfs_spillmetablock != -1) {
         close(unifyfs_spillmetablock);
         unifyfs_spillmetablock = -1;
     }
+#endif
 
     /* detach from superblock shmem, but don't unlink the file so that
      * a later client can reattach. */
@@ -1868,8 +1882,10 @@ void fill_client_attach_info(unifyfs_attach_in_t* in)
     in->shmem_super_size  = shm_super_ctx->size;
     in->meta_offset       = meta_offset;
     in->meta_size         = meta_size;
+#if 0
     in->logio_mem_size    = logio_ctx->shmem->size;
     in->logio_spill_size  = logio_ctx->spill_sz;
+#endif
     in->logio_spill_dir   = strdup(client_cfg.logio_spill_dir);
 }
 
@@ -1985,6 +2001,7 @@ int unifyfs_mount(const char prefix[], int rank, size_t size,
         return rc;
     }
 
+#if 0
     /* Call client attach rpc function to register our newly created shared
      * memory and files with server */
     LOGDBG("calling attach rpc");
@@ -2018,6 +2035,7 @@ int unifyfs_mount(const char prefix[], int rank, size_t size,
 
     /* record client state as mounted for specific app_id */
     unifyfs_mounted = unifyfs_app_id;
+#endif
 
     return UNIFYFS_SUCCESS;
 }

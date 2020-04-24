@@ -46,7 +46,6 @@
 #include "arraylist.h"
 #include "unifyfs_const.h"
 #include "unifyfs_log.h"
-#include "unifyfs_logio.h"
 #include "unifyfs_meta.h"
 #include "unifyfs_shm.h"
 #include "unifyfs_inode_tree.h"
@@ -149,7 +148,7 @@ typedef struct app_client {
 
     struct reqmgr_thrd* reqmgr; /* this client's request manager thread */
 
-    logio_context* logio;    /* logio context for write data */
+    //logio_context* logio;    /* logio context for write data */
 
     shm_context* shmem_data;  /* shmem context for read data */
 

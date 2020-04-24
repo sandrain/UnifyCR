@@ -30,11 +30,15 @@
 // system headers
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <limits.h>
+#include <string.h>
 
 // server components
 #include "unifyfs_global.h"
 #include "unifyfs_metadata.h"
 #include "unifyfs_request_manager.h"
+#include "unifyfs_mds.h"
+#include "unifyfs_lsm.h"
 
 // margo rpcs
 #include "margo_server.h"
@@ -58,7 +62,7 @@
  * client */
 static void unifyfs_mount_rpc(hg_handle_t handle)
 {
-    int rc;
+    //int rc;
     int ret = (int)UNIFYFS_SUCCESS;
 
     /* get input params */
@@ -66,6 +70,7 @@ static void unifyfs_mount_rpc(hg_handle_t handle)
     hg_return_t hret = margo_get_input(handle, &in);
     assert(hret == HG_SUCCESS);
 
+#if 0
     /* read app_id and client_id from input */
     int app_id = unifyfs_generate_gfid(in.mount_prefix);
     int client_id = -1;
@@ -109,6 +114,15 @@ static void unifyfs_mount_rpc(hg_handle_t handle)
     out.meta_slice_sz = meta_slice_sz;
     out.app_id = (int32_t) app_id;
     out.client_id = (int32_t) client_id;
+    out.ret = ret;
+#endif
+
+    ret = unifyfs_lsm_mount(in.mount_prefix, in.client_addr_str);
+    if (ret) {
+        LOGERR("lsm_mount failed (ret=%d)", ret);
+    }
+
+    unifyfs_mount_out_t out;
     out.ret = ret;
 
     /* send output back to caller */
@@ -519,3 +533,215 @@ static void unifyfs_mread_rpc(hg_handle_t handle)
     margo_destroy(handle);
 }
 DEFINE_MARGO_RPC_HANDLER(unifyfs_mread_rpc)
+
+/* localfs testing */
+
+#if 0
+static void unifyfs_handle_create(hg_handle_t handle)
+{
+    int ret = 0;
+    char pathname[PATH_MAX] = { 0, };
+    hg_return_t hret = 0;
+    int flags = 0;
+    int mode = 0;
+    unifyfs_create_in_t in = { 0, };
+    unifyfs_create_out_t out = { 0, };
+
+    hret = margo_get_input(handle, &in);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to read input from rpc");
+        return;
+    }
+
+    strcpy(pathname, in.pathname);
+    flags = in.flags;
+    mode= in.mode;
+
+    LOGDBG("create request: %s, %d, %d", pathname, flags, mode);
+
+    ret = unifyfs_mds_create(pathname, flags, mode);
+    if (ret) {
+        LOGERR("mds_create failed (ret=%d)", ret);
+    }
+
+    out.ret = ret;
+    hret = margo_respond(handle, &out);
+
+    margo_destroy(handle);
+}
+DEFINE_MARGO_RPC_HANDLER(unifyfs_handle_create)
+
+static void unifyfs_handle_search(hg_handle_t handle)
+{
+    int ret = 0;
+    char pathname[PATH_MAX] = { 0, };
+    hg_return_t hret = 0;
+    unifyfs_search_in_t in = { 0, };
+    unifyfs_search_out_t out = { 0, };
+
+    hret = margo_get_input(handle, &in);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to read input from rpc");
+        return;
+    }
+
+    strcpy(pathname, in.pathname);
+
+    LOGDBG("search request: %s", pathname);
+
+    /* this return 1 if the file is found */
+    ret = unifyfs_mds_search(pathname);
+
+    out.ret = ret == 1 ? 0 : ENOENT;
+    hret = margo_respond(handle, &out);
+
+    margo_destroy(handle);
+}
+DEFINE_MARGO_RPC_HANDLER(unifyfs_handle_search)
+
+static void unifyfs_handle_fsync(hg_handle_t handle)
+{
+    int ret = 0;
+    char pathname[PATH_MAX] = { 0, };
+    size_t size = 0;
+    hg_return_t hret = 0;
+    unifyfs_fsync_in_t in = { 0, };
+    unifyfs_fsync_out_t out = { 0, };
+
+    hret = margo_get_input(handle, &in);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to read input from rpc");
+        return;
+    }
+
+    size = in.size;
+    strcpy(pathname, in.pathname);
+
+    LOGDBG("fsync request: %s (size=%lu)", pathname, size);
+
+    ret = unifyfs_mds_fsync(pathname, size);
+
+    out.ret = ret;
+    hret = margo_respond(handle, &out);
+
+    margo_destroy(handle);
+}
+DEFINE_MARGO_RPC_HANDLER(unifyfs_handle_fsync)
+
+static void unifyfs_handle_filelen(hg_handle_t handle)
+{
+    int ret = 0;
+    char pathname[PATH_MAX] = { 0, };
+    size_t size = 0;
+    hg_return_t hret = 0;
+    unifyfs_filelen_in_t in = { 0, };
+    unifyfs_filelen_out_t out = { 0, };
+
+    hret = margo_get_input(handle, &in);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to read input from rpc");
+        return;
+    }
+
+    strcpy(pathname, in.pathname);
+
+    LOGDBG("filelen request: %s", pathname);
+
+    ret = unifyfs_mds_filelen(pathname, &size);
+
+    out.ret = ret;
+    out.size = size;
+    hret = margo_respond(handle, &out);
+
+    margo_destroy(handle);
+}
+DEFINE_MARGO_RPC_HANDLER(unifyfs_handle_filelen)
+#endif
+
+static void unifyfs_handle_lsm_open(hg_handle_t handle)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_lsm_open_in_t in;
+    unifyfs_lsm_open_out_t out;
+
+    hret = margo_get_input(handle, &in);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to read input from rpc (ret=%d)", hret);
+        return;
+    }
+
+    ret = unifyfs_lsm_open(in.pathname, in.flags, in.mode);
+
+    out.ret = ret;
+
+    hret = margo_respond(handle, &out);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to send respond (ret=%d)", hret);
+    }
+
+    margo_destroy(handle);
+}
+DEFINE_MARGO_RPC_HANDLER(unifyfs_handle_lsm_open)
+
+static void unifyfs_handle_lsm_close(hg_handle_t handle)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_lsm_close_in_t in;
+    unifyfs_lsm_close_out_t out;
+
+    hret = margo_get_input(handle, &in);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to read input from rpc (ret=%d)", hret);
+        return;
+    }
+
+    ret = unifyfs_lsm_close(in.ino);
+
+    if (ret) {
+        LOGERR("unifyfs_lsm_close failed (ret=%d)", ret);
+    }
+
+    out.ret = ret;
+
+    hret = margo_respond(handle, &out);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to send respond (ret=%d)", hret);
+    }
+
+    margo_destroy(handle);
+}
+DEFINE_MARGO_RPC_HANDLER(unifyfs_handle_lsm_close)
+
+static void unifyfs_handle_lsm_stat(hg_handle_t handle)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_lsm_stat_in_t in;
+    unifyfs_lsm_stat_out_t out;
+    struct stat sb = { 0, };
+    unifyfs_stat_t usb = { 0, };
+
+    hret = margo_get_input(handle, &in);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to read input from rpc (ret=%d)", hret);
+        return;
+    }
+
+    ret = unifyfs_lsm_stat(in.ino, &sb);
+
+    out.ret = ret;
+    if (ret == 0) {
+        unifyfs_stat_from_sys_stat(&usb, &sb);
+        out.statbuf = usb;
+    }
+
+    hret = margo_respond(handle, &out);
+    if (HG_SUCCESS != hret) {
+        LOGERR("failed to send respond (ret=%d)", hret);
+    }
+
+    margo_destroy(handle);
+}
+DEFINE_MARGO_RPC_HANDLER(unifyfs_handle_lsm_stat)

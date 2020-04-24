@@ -41,6 +41,7 @@
  */
 
 #include "unifyfs-internal.h"
+#include "unifyfs-storage.h"
 #include "unifyfs-sysio.h"
 #include "margo_client.h"
 #include "ucr_read_builder.h"
@@ -426,8 +427,10 @@ static int __stat(const char* path, struct stat* buf)
 int UNIFYFS_WRAP(stat)(const char* path, struct stat* buf)
 {
     LOGDBG("stat was called for %s", path);
+
     if (unifyfs_intercept_path(path)) {
-        return __stat(path, buf);
+        //return __stat(path, buf);
+        return unifyfs_storage_stat(path, buf);
     } else {
         MAP_OR_FAIL(stat);
         return UNIFYFS_REAL(stat)(path, buf);
@@ -717,6 +720,14 @@ int UNIFYFS_WRAP(open)(const char* path, int flags, ...)
     /* determine whether we should intercept this path */
     int ret;
     if (unifyfs_intercept_path(path)) {
+        ret = unifyfs_storage_open(path, flags, mode);
+
+        if (ret > 0) {
+            ret += unifyfs_fd_limit;
+        }
+
+        return ret;
+#if 0
         /* TODO: handle relative paths using current working directory */
 
         /* create the file */
@@ -750,6 +761,7 @@ int UNIFYFS_WRAP(open)(const char* path, int flags, ...)
         /* don't conflict with active system fds that range from 0 - (fd_limit) */
         ret = fd + unifyfs_fd_limit;
         return ret;
+#endif
     } else {
         MAP_OR_FAIL(open);
         if (flags & O_CREAT) {
@@ -836,6 +848,8 @@ off_t UNIFYFS_WRAP(lseek)(int fd, off_t offset, int whence)
 {
     /* check whether we should intercept this file descriptor */
     if (unifyfs_intercept_fd(&fd)) {
+        return unifyfs_storage_lseek(fd, offset, whence);
+#if 0
         /* TODO: check that fd is actually in use */
 
         /* get the file id for this file descriptor */
@@ -919,6 +933,7 @@ off_t UNIFYFS_WRAP(lseek)(int fd, off_t offset, int whence)
         /* set and return final file position */
         filedesc->pos = current_pos;
         return current_pos;
+#endif
     } else {
         MAP_OR_FAIL(lseek);
         off_t ret = UNIFYFS_REAL(lseek)(fd, offset, whence);
@@ -1006,6 +1021,8 @@ ssize_t UNIFYFS_WRAP(read)(int fd, void* buf, size_t count)
 {
     /* check whether we should intercept this file descriptor */
     if (unifyfs_intercept_fd(&fd)) {
+        return unifyfs_storage_read(fd, buf, count);
+#if 0
         /* get file id */
         int fid = unifyfs_get_fid_from_fd(fd);
         if (fid < 0) {
@@ -1025,6 +1042,7 @@ ssize_t UNIFYFS_WRAP(read)(int fd, void* buf, size_t count)
         /* execute read */
         ssize_t ret = unifyfs_fd_read(fd, filedesc->pos, buf, count);
         return ret;
+#endif
     } else {
         MAP_OR_FAIL(read);
         ssize_t ret = UNIFYFS_REAL(read)(fd, buf, count);
@@ -1041,6 +1059,8 @@ ssize_t UNIFYFS_WRAP(write)(int fd, const void* buf, size_t count)
 
     /* check whether we should intercept this file descriptor */
     if (unifyfs_intercept_fd(&fd)) {
+        ret = unifyfs_storage_write(fd, buf, count);
+#if 0
         /* get pointer to file descriptor structure */
         unifyfs_fd_t* filedesc = unifyfs_get_filedesc_from_fd(fd);
         if (filedesc == NULL) {
@@ -1070,6 +1090,7 @@ ssize_t UNIFYFS_WRAP(write)(int fd, const void* buf, size_t count)
 
         /* update file position */
         filedesc->pos = pos + count;
+#endif
     } else {
         MAP_OR_FAIL(write);
         ret = UNIFYFS_REAL(write)(fd, buf, count);
@@ -1608,8 +1629,11 @@ static void service_local_reqs(
             char* req_ptr = req->buf + req_offset;
             off_t log_offset = rep_log_pos + rep_offset;
             size_t nread = 0;
+#if 0
             int rc = unifyfs_logio_read(logio_ctx, log_offset, length,
                                         req_ptr, &nread);
+#endif
+            int rc = 0;
             if (rc == UNIFYFS_SUCCESS) {
                 if (nread < length) {
                     /* account for short read by updating end offset */
@@ -2051,6 +2075,7 @@ int UNIFYFS_WRAP(ftruncate)(int fd, off_t length)
 
 int UNIFYFS_WRAP(fsync)(int fd)
 {
+#if 0
     /* check whether we should intercept this file descriptor */
     if (unifyfs_intercept_fd(&fd)) {
         /* get the file id for this file descriptor */
@@ -2084,6 +2109,8 @@ int UNIFYFS_WRAP(fsync)(int fd)
         int ret = UNIFYFS_REAL(fsync)(fd);
         return ret;
     }
+#endif
+    return unifyfs_storage_fsync(fd);
 }
 
 int UNIFYFS_WRAP(fdatasync)(int fd)
@@ -2264,6 +2291,8 @@ int UNIFYFS_WRAP(close)(int fd)
     if (unifyfs_intercept_fd(&fd)) {
         LOGDBG("closing fd %d", fd);
 
+        return unifyfs_storage_close(fd);
+#if 0
         /* TODO: what to do if underlying file has been deleted? */
 
         /* check that fd is actually in use */
@@ -2301,6 +2330,7 @@ int UNIFYFS_WRAP(close)(int fd)
         unifyfs_stack_push(unifyfs_fd_stack, fd);
 
         return 0;
+#endif
     } else {
         MAP_OR_FAIL(close);
         int ret = UNIFYFS_REAL(close)(fd);

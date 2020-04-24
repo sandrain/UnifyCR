@@ -16,6 +16,8 @@
 #define __UNIFYFS_RPC_TYPES_H
 
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <margo.h>
 #include <mercury.h>
 #include <mercury_proc_string.h>
@@ -27,6 +29,80 @@ typedef struct timespec sys_timespec_t;
 MERCURY_GEN_STRUCT_PROC(sys_timespec_t,
                         ((uint64_t)(tv_sec))
                         ((uint64_t)(tv_nsec)))
+
+typedef struct {
+    uint64_t dev;
+    uint64_t ino;
+    uint64_t mode;
+    uint64_t nlink;
+    uint64_t uid;
+    uint64_t gid;
+    uint64_t rdev;
+    uint64_t size;
+    uint64_t blksize;
+    uint64_t blocks;
+    uint64_t atime;
+    uint64_t mtime;
+    uint64_t ctime;
+} unifyfs_stat_t;
+
+/* sys stat type */
+MERCURY_GEN_STRUCT_PROC(unifyfs_stat_t,
+                        ((uint64_t)(dev))
+                        ((uint64_t)(ino))
+                        ((uint64_t)(mode))
+                        ((uint64_t)(nlink))
+                        ((uint64_t)(uid))
+                        ((uint64_t)(gid))
+                        ((uint64_t)(rdev))
+                        ((uint64_t)(size))
+                        ((uint64_t)(blksize))
+                        ((uint64_t)(blocks))
+                        ((uint64_t)(atime))
+                        ((uint64_t)(mtime))
+                        ((uint64_t)(ctime)))
+
+static inline
+void unifyfs_stat_from_sys_stat(unifyfs_stat_t *usb, struct stat *sb)
+{
+    if (!usb || !sb)
+        return;
+
+    usb->dev = sb->st_dev;
+    usb->ino = sb->st_ino;
+    usb->mode = sb->st_mode;
+    usb->nlink = sb->st_nlink;
+    usb->uid = sb->st_uid;
+    usb->gid = sb->st_gid;
+    usb->rdev = sb->st_rdev;
+    usb->size = sb->st_size;
+    usb->blksize = sb->st_blksize;
+    usb->blocks = sb->st_blocks;
+    usb->atime = sb->st_atime;
+    usb->mtime = sb->st_mtime;
+    usb->ctime = sb->st_ctime;
+}
+
+static inline
+void sys_stat_from_unifyfs_stat(struct stat *sb, unifyfs_stat_t *usb)
+{
+    if (!usb || !sb)
+        return;
+
+    sb->st_dev = usb->dev;
+    sb->st_ino = usb->ino;
+    sb->st_mode = usb->mode;
+    sb->st_nlink = usb->nlink;
+    sb->st_uid = usb->uid;
+    sb->st_gid = usb->gid;
+    sb->st_rdev = usb->rdev;
+    sb->st_size = usb->size;
+    sb->st_blksize = usb->blksize;
+    sb->st_blocks = usb->blocks;
+    sb->st_atime = usb->atime;
+    sb->st_mtime = usb->mtime;
+    sb->st_ctime = usb->ctime;
+}
 
 /* encode/decode unifyfs_file_attr_t */
 static inline

@@ -59,6 +59,8 @@ CLIENT_COMMON_SOURCES = \
   unifyfs-stdio.h \
   unifyfs-sysio.c \
   unifyfs-sysio.h \
+  unifyfs-storage.c \
+  unifyfs-storage.h \
   uthash.h \
   utlist.h
 

@@ -97,7 +97,6 @@
 #include "unifyfs_const.h"
 #include "unifyfs_keyval.h"
 #include "unifyfs_log.h"
-#include "unifyfs_logio.h"
 #include "unifyfs_meta.h"
 #include "unifyfs_shm.h"
 #include "seg_tree.h"
@@ -331,7 +330,9 @@ extern int local_del_cnt;
 extern shm_context* shm_recv_ctx;
 
 /* log-based I/O context */
+#if 0
 extern logio_context* logio_ctx;
+#endif
 
 extern int unifyfs_app_id;
 extern int unifyfs_client_id;

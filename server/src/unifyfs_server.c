@@ -41,6 +41,7 @@
 #include "unifyfs_metadata.h"
 #include "unifyfs_request_manager.h"
 #include "unifyfs_service_manager.h"
+#include "unifyfs_lsm.h"
 
 // margo rpcs
 #include "margo_server.h"
@@ -356,6 +357,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
+#if 0
     /* launch the service manager */
     LOGDBG("launching service manager thread");
     rc = svcmgr_init();
@@ -370,8 +372,15 @@ int main(int argc, char* argv[])
         LOGERR("%s", unifyfs_rc_enum_description(rc));
         exit(1);
     }
+#endif
 
-    LOGDBG("finished service initialization");
+    rc = unifyfs_lsm_init(&server_cfg);
+    if (rc) {
+        LOGERR("lsm_init faild: %s", strerror(rc));
+        exit(1);
+    }
+
+    printf("finished service initialization\n");
 
     while (1) {
         sleep(1);
@@ -381,8 +390,10 @@ int main(int argc, char* argv[])
         }
     }
 
+#if 0
     LOGDBG("stopping service manager thread");
     rc = svcmgr_fini();
+#endif
 
     LOGDBG("cleaning run state");
     rc = unifyfs_clean_runstate(&server_cfg);
@@ -779,11 +790,15 @@ unifyfs_rc attach_app_client(app_client* client,
         return EINVAL;
     }
 
+#if 0
     int app_id = client->app_id;
     int client_id = client->client_id;
+#endif
     int failure = 0;
 
     /* initialize server-side logio for this client */
+    int rc;
+#if 0
     int rc = unifyfs_logio_init_server(app_id, client_id,
                                        logio_shmem_size,
                                        logio_spill_size,
@@ -792,6 +807,7 @@ unifyfs_rc attach_app_client(app_client* client,
     if (rc != UNIFYFS_SUCCESS) {
         failure = 1;
     }
+#endif
 
     /* attach server-side shmem regions for this client */
     rc = attach_to_client_shmem(client, shmem_data_size, shmem_super_size);
@@ -869,10 +885,12 @@ unifyfs_rc cleanup_app_client(app_client* client)
 
     disconnect_app_client(client);
 
+#if 0
     /* close client logio context */
     if (NULL != client->logio) {
         unifyfs_logio_close(client->logio);
     }
+#endif
 
     /* reset app->clients array index if set */
     app_config* app = get_application(client->app_id);

@@ -6,6 +6,11 @@
 #include "unifyfs_rpc_util.h"
 #include "margo_client.h"
 
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 /* global rpc context */
 static client_rpc_context_t* client_rpc_context; // = NULL
 
@@ -74,6 +79,26 @@ static void register_client_rpcs(client_rpc_context_t* ctx)
                        unifyfs_mread_in_t,
                        unifyfs_mread_out_t,
                        NULL);
+
+    /* localfs testing */
+
+    ctx->rpcs.lsm_open_id
+        = MARGO_REGISTER(mid, "unifyfs_handle_lsm_open",
+                         unifyfs_lsm_open_in_t,
+                         unifyfs_lsm_open_out_t,
+                         NULL);
+
+    ctx->rpcs.lsm_close_id
+        = MARGO_REGISTER(mid, "unifyfs_handle_lsm_close",
+                         unifyfs_lsm_close_in_t,
+                         unifyfs_lsm_close_out_t,
+                         NULL);
+
+    ctx->rpcs.lsm_stat_id
+        = MARGO_REGISTER(mid, "unifyfs_handle_lsm_stat",
+                         unifyfs_lsm_stat_in_t,
+                         unifyfs_lsm_stat_out_t,
+                         NULL);
 }
 
 /* initialize margo client-server rpc */
@@ -258,6 +283,7 @@ int invoke_client_mount_rpc(void)
 
     /* fill in input struct */
     unifyfs_mount_in_t in;
+
     fill_client_mount_info(&in);
 
     /* pass our margo address to the server */
@@ -279,6 +305,7 @@ int invoke_client_mount_rpc(void)
     int32_t ret = out.ret;
     LOGDBG("Got response ret=%" PRIi32, ret);
 
+#if 0
     /* get slice size for write index key/value store */
     unifyfs_key_slice_range = out.meta_slice_sz;
     LOGDBG("set unifyfs_key_slice_range=%zu", unifyfs_key_slice_range);
@@ -290,6 +317,7 @@ int invoke_client_mount_rpc(void)
         LOGWARN("mismatch on app_id - using %d, server returned %d",
                 unifyfs_app_id, srvr_app_id);
     }
+#endif
 
     /* free resources */
     margo_free_output(handle, &out);
@@ -680,3 +708,201 @@ int invoke_client_mread_rpc(int read_count, size_t size, void* buffer)
     margo_destroy(handle);
     return (int)ret;
 }
+
+#if 0
+int unifyfs_delegate_create(const char *pathname, int flags, mode_t mode)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_create_in_t in;
+    unifyfs_create_out_t out;
+    hg_handle_t handle = create_handle(client_rpc_context->rpcs.create_id);
+
+    in.pathname = pathname;
+    in.flags = flags;
+    in.mode = mode;
+
+    LOGDBG("sending create rpc to server");
+
+    hret = margo_forward(handle, &in);
+    assert(HG_SUCCESS == hret);
+
+    hret = margo_get_output(handle, &out);
+    assert(HG_SUCCESS == hret);
+
+    ret = out.ret;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int unifyfs_delegate_search(const char *pathname)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_search_in_t in;
+    unifyfs_search_out_t out;
+    hg_handle_t handle = create_handle(client_rpc_context->rpcs.search_id);
+
+    in.pathname = pathname;
+
+    LOGDBG("sending search rpc to server");
+
+    hret = margo_forward(handle, &in);
+    assert(HG_SUCCESS == hret);
+
+    hret = margo_get_output(handle, &out);
+    assert(HG_SUCCESS == hret);
+
+    ret = out.ret;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int unifyfs_delegate_fsync(const char *pathname, size_t size)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_fsync_in_t in;
+    unifyfs_fsync_out_t out;
+    hg_handle_t handle = create_handle(client_rpc_context->rpcs.fsync_id);
+
+    in.pathname = pathname;
+    in.size = size;
+
+    LOGDBG("sending fsync rpc to server");
+
+    hret = margo_forward(handle, &in);
+    assert(HG_SUCCESS == hret);
+
+    hret = margo_get_output(handle, &out);
+    assert(HG_SUCCESS == hret);
+
+    ret = out.ret;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int unifyfs_delegate_filelen(const char *pathname, size_t *size)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_filelen_in_t in;
+    unifyfs_filelen_out_t out;
+    hg_handle_t handle = create_handle(client_rpc_context->rpcs.filelen_id);
+
+    in.pathname = pathname;
+
+    LOGDBG("sending filelen rpc to server");
+
+    hret = margo_forward(handle, &in);
+    assert(HG_SUCCESS == hret);
+
+    hret = margo_get_output(handle, &out);
+    assert(HG_SUCCESS == hret);
+
+    ret = out.ret;
+
+    if (ret == 0) {
+        *size = out.size;
+    }
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+#endif
+
+int unifyfs_invoke_lsm_open(const char *pathname, int flags, mode_t mode)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_lsm_open_in_t in;
+    unifyfs_lsm_open_out_t out;
+    hg_handle_t handle = create_handle(client_rpc_context->rpcs.lsm_open_id);
+
+    in.pathname = pathname;
+    in.flags = flags;
+    in.mode = mode;
+
+    LOGDBG("sending lsm_open rpc to server");
+
+    hret = margo_forward(handle, &in);
+    assert(HG_SUCCESS == hret);
+
+    hret = margo_get_output(handle, &out);
+    assert(HG_SUCCESS == hret);
+
+    ret = out.ret;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int unifyfs_invoke_lsm_close(uint64_t ino)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_lsm_close_in_t in;
+    unifyfs_lsm_close_out_t out;
+    hg_handle_t handle = create_handle(client_rpc_context->rpcs.lsm_close_id);
+
+    in.ino = ino;
+
+    LOGDBG("sending lsm_close rpc to server");
+
+    hret = margo_forward(handle, &in);
+    assert(HG_SUCCESS == hret);
+
+    hret = margo_get_output(handle, &out);
+    assert(HG_SUCCESS == hret);
+
+    ret = out.ret;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int unifyfs_invoke_lsm_stat(uint64_t ino, struct stat *sb)
+{
+    int ret = 0;
+    hg_return_t hret = 0;
+    unifyfs_lsm_stat_in_t in;
+    unifyfs_lsm_stat_out_t out;
+    hg_handle_t handle = create_handle(client_rpc_context->rpcs.lsm_stat_id);
+
+    in.ino = ino;
+
+    LOGDBG("sending lsm_stat rpc to server");
+
+    hret = margo_forward(handle, &in);
+    assert(HG_SUCCESS == hret);
+
+    hret = margo_get_output(handle, &out);
+    assert(HG_SUCCESS == hret);
+
+    ret = out.ret;
+    if (ret == 0) {
+        sys_stat_from_unifyfs_stat(sb, &out.statbuf);
+    }
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+

@@ -351,6 +351,8 @@ int main(int argc, char** argv)
 
     ret = do_write();
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
     close(fd);
 
     fflush(stdout);

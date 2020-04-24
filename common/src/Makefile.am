@@ -33,12 +33,12 @@ BASE_SRCS = \
   unifyfs_keyval.c \
   unifyfs_log.h \
   unifyfs_log.c \
-  unifyfs_logio.h \
-  unifyfs_logio.c \
   unifyfs_meta.h \
   unifyfs_meta.c \
   unifyfs_misc.c \
   unifyfs_misc.h \
+  unifyfs_fmap.h \
+  unifyfs_rpc_types.h \
   unifyfs_rpc_util.h \
   unifyfs_rpc_util.c \
   unifyfs_client_rpcs.h \

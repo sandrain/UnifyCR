@@ -42,11 +42,16 @@ MERCURY_GEN_PROC(unifyfs_mount_in_t,
                  ((hg_const_string_t)(mount_prefix))
                  ((hg_const_string_t)(client_addr_str)))
 MERCURY_GEN_PROC(unifyfs_mount_out_t,
+                 ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(unifyfs_mount_rpc)
+#if 0
+MERCURY_GEN_PROC(unifyfs_mount_out_t,
                  ((hg_size_t)(meta_slice_sz))
                  ((int32_t)(app_id))
                  ((int32_t)(client_id))
                  ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(unifyfs_mount_rpc)
+#endif
 
 /* unifyfs_unmount_rpc (client => server)
  *
@@ -167,6 +172,52 @@ MERCURY_GEN_PROC(unifyfs_mread_in_t,
                  ((hg_bulk_t)(bulk_handle)))
 MERCURY_GEN_PROC(unifyfs_mread_out_t, ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(unifyfs_mread_rpc)
+
+/* localfs testing */
+
+/* unifyfs_delegate_create */
+MERCURY_GEN_PROC(unifyfs_lsm_open_in_t,
+        ((hg_const_string_t)(pathname))
+        ((int32_t)(flags))
+        ((int32_t)(mode)))
+MERCURY_GEN_PROC(unifyfs_lsm_open_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(unifyfs_handle_lsm_open)
+
+MERCURY_GEN_PROC(unifyfs_lsm_close_in_t,
+        ((hg_size_t)(ino)))
+MERCURY_GEN_PROC(unifyfs_lsm_close_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(unifyfs_handle_lsm_close)
+
+MERCURY_GEN_PROC(unifyfs_lsm_stat_in_t,
+        ((hg_size_t)(ino)))
+MERCURY_GEN_PROC(unifyfs_lsm_stat_out_t,
+        ((int32_t)(ret))
+        ((unifyfs_stat_t)(statbuf)))
+DECLARE_MARGO_RPC_HANDLER(unifyfs_handle_lsm_stat)
+
+#if 0
+MERCURY_GEN_PROC(unifyfs_search_in_t,
+        ((hg_const_string_t)(pathname)))
+MERCURY_GEN_PROC(unifyfs_search_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(unifyfs_handle_search)
+
+MERCURY_GEN_PROC(unifyfs_fsync_in_t,
+        ((hg_const_string_t)(pathname))
+        ((hg_size_t)(size)))
+MERCURY_GEN_PROC(unifyfs_fsync_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(unifyfs_handle_fsync)
+
+MERCURY_GEN_PROC(unifyfs_filelen_in_t,
+        ((hg_const_string_t)(pathname)))
+MERCURY_GEN_PROC(unifyfs_filelen_out_t,
+        ((int32_t)(ret))
+        ((hg_size_t)(size)))
+DECLARE_MARGO_RPC_HANDLER(unifyfs_handle_filelen)
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

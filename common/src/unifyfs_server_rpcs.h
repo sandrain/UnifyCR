@@ -127,6 +127,60 @@ MERCURY_GEN_PROC(unlink_out_t,
                  ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(unlink_rpc)
 
+/*
+ * localfs testing
+ */
+
+MERCURY_GEN_PROC(mds_create_in_t,
+        ((hg_const_string_t)(pathname)))
+MERCURY_GEN_PROC(mds_create_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(mds_create_handle_rpc);
+
+MERCURY_GEN_PROC(mds_search_in_t,
+        ((hg_const_string_t)(pathname)))
+MERCURY_GEN_PROC(mds_search_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(mds_search_handle_rpc);
+
+MERCURY_GEN_PROC(mds_fsync_in_t,
+        ((hg_const_string_t)(pathname))
+        ((hg_size_t)(size)))
+MERCURY_GEN_PROC(mds_fsync_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(mds_fsync_handle_rpc);
+
+MERCURY_GEN_PROC(mds_filelen_in_t,
+        ((hg_const_string_t)(pathname)))
+MERCURY_GEN_PROC(mds_filelen_out_t,
+        ((int32_t)(ret))
+        ((hg_size_t)(size)))
+DECLARE_MARGO_RPC_HANDLER(mds_filelen_handle_rpc);
+
+MERCURY_GEN_PROC(mds_addfmap_in_t,
+        ((hg_const_string_t)(pathname))
+        ((hg_size_t)(fmap_size))
+        ((hg_bulk_t)(fmap)))
+MERCURY_GEN_PROC(mds_addfmap_out_t,
+        ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(mds_addfmap_handle_rpc);
+
+MERCURY_GEN_PROC(mds_getfmap_in_t,
+        ((hg_const_string_t)(pathname)))
+MERCURY_GEN_PROC(mds_getfmap_out_t,
+        ((int32_t)(ret))
+        ((hg_size_t)(fmap_size))
+        ((hg_bulk_t)(fmap)))
+DECLARE_MARGO_RPC_HANDLER(mds_getfmap_handle_rpc);
+
+MERCURY_GEN_PROC(mds_stat_in_t,
+        ((hg_const_string_t)(pathname)))
+MERCURY_GEN_PROC(mds_stat_out_t,
+        ((int32_t)(ret))
+        ((unifyfs_stat_t)(statbuf)))
+DECLARE_MARGO_RPC_HANDLER(mds_stat_handle_rpc);
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
