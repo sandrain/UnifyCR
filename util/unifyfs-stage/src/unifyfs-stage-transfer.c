@@ -48,7 +48,7 @@ static int md5_checksum(const char* path, unsigned char* digest)
     int ret = 0;
     size_t len = 0;
     int fd = -1;
-    unsigned char data[1024] = { 0, };
+    unsigned char data[UNIFYFS_STAGE_MD5_BLOCKSIZE] = { 0, };
     MD5_CTX md5;
 
     fd = open(path, O_RDONLY);
@@ -63,7 +63,7 @@ static int md5_checksum(const char* path, unsigned char* digest)
         goto out;
     }
 
-    while ((len = read(fd, (void*) data, 1024)) != 0) {
+    while ((len = read(fd, (void*) data, UNIFYFS_STAGE_MD5_BLOCKSIZE)) != 0) {
         ret = MD5_Update(&md5, data, len);
         if (!ret) {
             fprintf(stderr, "failed to update checksum\n");

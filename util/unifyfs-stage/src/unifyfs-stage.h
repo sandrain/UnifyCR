@@ -5,6 +5,8 @@
 #include <stdarg.h>
 #include <unifyfs.h>
 
+#define UNIFYFS_STAGE_MD5_BLOCKSIZE    (1048576)
+
 /*
  * serial: each file is tranferred by a process.
  * parallel: a file is transferred by all processes.
