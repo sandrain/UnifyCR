@@ -15,6 +15,7 @@ TESTS = \
 	9100-metadata-api.t \
 	9200-seg-tree-test.t \
 	9201-slotmap-test.t \
+	9300-unifyfs-stage-test.t \
 	9999-cleanup.t
 
 check_SCRIPTS = \
@@ -29,6 +30,7 @@ check_SCRIPTS = \
 	9100-metadata-api.t \
 	9200-seg-tree-test.t \
 	9201-slotmap-test.t \
+	9300-unifyfs-stage-test.t \
 	9999-cleanup.t
 
 EXTRA_DIST = \
