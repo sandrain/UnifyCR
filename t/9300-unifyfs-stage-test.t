@@ -34,4 +34,27 @@ test_expect_success "source.file exists (sourced from /dev/zero)" '
     test_path_is_file ${UNIFYFS_TEST_TMPDIR}/stage_source/source.file
 '
 
+rm -f ${UNIFYFS_TEST_TMPDIR}/config/*
+rm -f ${UNIFYFS_TEST_TMPDIR}/stage_destination/*
+
+test_expect_success "config directory is empty" '
+    test_dir_is_empty ${UNIFYFS_TEST_TMPDIR}/config
+'
+
+echo "\"${UNIFYFS_TEST_TMPDIR}/stage_source/source.file\" \"${UNIFYFS_TEST_TMPDIR}/stage_destination/destination.file\"" > ${UNIFYFS_TEST_TMPDIR}/config/test.manifest
+
+test_expect_success "config directory now has manifest file" '
+    test_path_is_file  ${UNIFYFS_TEST_TMPDIR}/config/test.manifest
+'
+
+test_expect_success "target directory is empty" '
+    test_dir_is_empty ${UNIFYFS_TEST_TMPDIR}/stage_destination
+'
+
+${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage ${UNIFYFS_TEST_TMPDIR}/config/test.manifest > ${UNIFYFS_TEST_TMPDIR}/config/stage_output.OUT 2>&1 
+
+test_expect_success "input file has been staged to output" '
+    test_path_is_file ${UNIFYFS_TEST_TMPDIR}/stage_destination/destination.file
+'
+
 test_done
