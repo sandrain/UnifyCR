@@ -319,9 +319,13 @@ int wait_stage(unifyfs_resource_t* resource, unifyfs_args_t* args, int op)
         if (fp) {
             char* line = fgets(linebuf, 15, fp);
             if (0 == strncmp("success", line, strlen("success"))) {
+                fclose(fp);
+                fp = NULL;
                 ret = 0;
                 break;      // transfer completed
             } else if (0 == strncmp("fail", line, strlen("fail"))) {
+                fclose(fp);
+                fp = NULL;
                 ret = -EIO;
                 break;      // transfer failed
             } else {
