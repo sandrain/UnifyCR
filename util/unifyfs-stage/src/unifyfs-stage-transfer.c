@@ -129,14 +129,14 @@ static int verify_checksum(const char* src, const char* dst)
     ret = md5_checksum(src, src_digest);
     if (ret) {
         fprintf(stderr, "failed to calculate checksum for %s (%s)\n",
-                        src, strerror(ret));
+                src, strerror(ret));
         return ret;
     }
 
     ret = md5_checksum(dst, dst_digest);
     if (ret) {
         fprintf(stderr, "failed to calculate checksum for %s (%s)\n",
-                        dst, strerror(ret));
+                dst, strerror(ret));
         return ret;
     }
 
@@ -149,9 +149,9 @@ static int verify_checksum(const char* src, const char* dst)
     for (i = 0; i < MD5_DIGEST_LENGTH; i++) {
         if (src_digest[i] != dst_digest[i]) {
             fprintf(stderr, "[%d] checksum verification failed: "
-                            "(src=%s, dst=%s)\n", rank,
-                            checksum_str(md5src, src_digest),
-                            checksum_str(md5dst, dst_digest));
+                    "(src=%s, dst=%s)\n", rank,
+                    checksum_str(md5src, src_digest),
+                    checksum_str(md5dst, dst_digest));
             ret = EIO;
         }
     }
@@ -284,35 +284,35 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
     fp = fopen(ctx->manifest_file, "r");
     if (!fp) {
         fprintf(stderr, "failed to open file %s: %s\n",
-		ctx->manifest_file, strerror(errno));
+                ctx->manifest_file, strerror(errno));
         ret = errno;
         goto out;
     }
 
-    while (NULL != fgets(linebuf, LINE_MAX-1, fp)) {
+    while (NULL != fgets(linebuf, LINE_MAX - 1, fp)) {
         if (strlen(linebuf) < 5) {
-	    // the manifest file perhaps ends with a couple of characters
-	    // and/or a newline not meant to be a transfer spec.
+            // the manifest file perhaps ends with a couple of characters
+            // and/or a newline not meant to be a transfer spec.
             if (linebuf[0] == '\n') {
-	        goto out;
-            } else{
-	        fprintf(stderr, "Short (bad) manifest file line: >%s<\n",
-			linebuf);
-		ret = -EINVAL;
+                goto out;
+            } else {
+                fprintf(stderr, "Short (bad) manifest file line: >%s<\n",
+                        linebuf);
+                ret = -EINVAL;
                 goto out;
             }
-	}
-	ret = unifyfs_parse_manifest_line(linebuf, &src, &dst);
-	if (ret < 0) {
-	    fprintf(stderr, "failed to parse %s (%s)\n",
-		    linebuf, strerror(ret));
+        }
+        ret = unifyfs_parse_manifest_line(linebuf, &src, &dst);
+        if (ret < 0) {
+            fprintf(stderr, "failed to parse %s (%s)\n",
+                    linebuf, strerror(ret));
             goto out;
-	}
+        }
         if (ctx->mode == UNIFYFS_STAGE_SERIAL) {
             if (count % total_ranks == rank) {
                 if (verbose) {
                     fprintf(stdout, "[%d] serial transfer: src=%s, dst=%s\n",
-                                    rank, src, dst);
+                            rank, src, dst);
                 }
 
                 ret = unifyfs_transfer_file_serial(src, dst);
@@ -322,7 +322,7 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
 
                 if (ret < 0) {
                     fprintf(stderr, "stat on %s failed (err=%d, %s)\n",
-                                    dst, errno, strerror(errno));
+                            dst, errno, strerror(errno));
                     ret = errno;
                     goto out;
                 }
@@ -342,7 +342,7 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
 
                 if (verbose) {
                     fprintf(stdout, "[%d] parallel transfer: src=%s, dst=%s\n",
-                                    rank, src, dst);
+                            rank, src, dst);
                 }
 
                 /* FIXME: Since we cannot use the mpi barrier inside the
@@ -350,10 +350,10 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
                  * here before others start to access. It would be better if we
                  * can skip this step.
                  */
-                fd = open(dst, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+                fd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0600);
                 if (fd < 0) {
                     fprintf(stderr, "[%d] failed to create the file %s\n",
-                                    rank, dst);
+                            rank, dst);
                     goto out;
                 }
 
@@ -369,13 +369,8 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
 
             MPI_Barrier(MPI_COMM_WORLD);
 
-            ret = stat(dst, &sb);
-            if (ret < 0) {
-                fprintf(stderr, "stat on %s failed (err=%d, %s)\n",
-                                dst, errno, strerror(errno));
-                ret = errno;
-                goto out;
-            }
+            // possible lamination check or force lamination
+            // may need to go here
 
             if (ctx->checksum && 0 == rank) {
                 ret = verify_checksum(src, dst);
@@ -390,7 +385,7 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
 out:
     if (ret) {
         fprintf(stderr, "failed to transfer file (src=%s, dst=%s): %s\n",
-                        src, dst, strerror(ret));
+                src, dst, strerror(ret));
     }
 
     if (fp) {
