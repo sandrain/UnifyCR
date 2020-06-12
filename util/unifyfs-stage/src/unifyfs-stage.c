@@ -115,7 +115,7 @@ static struct option long_opts[] = {
     { 0, 0, 0, 0 },
 };
 
-static char* short_opts = "cdhm:ps:v";
+static char* short_opts = "cdhm:ps:vN";
 
 static const char* usage_str =
     "\n"
