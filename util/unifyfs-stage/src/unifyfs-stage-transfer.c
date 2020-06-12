@@ -275,7 +275,6 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
     char* src = NULL;
     char* dst = NULL;
     char linebuf[LINE_MAX] = { 0, };
-    struct stat sb = { 0, };
 
     if (!ctx) {
         return EINVAL;
@@ -291,9 +290,8 @@ int unifyfs_stage_transfer(unifyfs_stage_t* ctx)
 
     while (NULL != fgets(linebuf, LINE_MAX - 1, fp)) {
         if (strlen(linebuf) < 5) {
-            // the manifest file perhaps ends with a couple of characters
-            // and/or a newline not meant to be a transfer spec.
             if (linebuf[0] == '\n') {
+                // manifest file ends in a blank line
                 goto out;
             } else {
                 fprintf(stderr, "Short (bad) manifest file line: >%s<\n",

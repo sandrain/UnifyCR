@@ -59,6 +59,7 @@ int verbose;
 static int debug;
 static int checksum;
 static int mode;
+static int should_we_mount_unifyfs = 1;
 static char* manifest_file;
 static char* mountpoint = "/unifyfs";
 static char* share_dir;
@@ -82,8 +83,8 @@ static int create_status_file(int status)
 
     return_val_from_scnprintf =
         scnprintf(filename, PATH_MAX,
-		  "%s/%s", share_dir, UNIFYFS_STAGE_STATUS_FILENAME);
-    if (return_val_from_scnprintf > (PATH_MAX-1)) {
+                  "%s/%s", share_dir, UNIFYFS_STAGE_STATUS_FILENAME);
+    if (return_val_from_scnprintf > (PATH_MAX - 1)) {
         fprintf(stderr, "Stage status file is too long!\n");
         return -ENOMEM;
     }
@@ -91,7 +92,7 @@ static int create_status_file(int status)
     fp = fopen(filename, "w");
     if (!fp) {
         fprintf(stderr, "failed to create %s (%s)\n",
-                        filename, strerror(errno));
+                filename, strerror(errno));
         return errno;
     }
 
@@ -110,6 +111,7 @@ static struct option long_opts[] = {
     { "parallel", 0, 0, 'p' },
     { "share-dir", 1, 0, 's' },
     { "verbose", 0, 0, 'v' },
+    { "no-mount-unifyfs", 0, 0, 'N' },
     { 0, 0, 0, 0 },
 };
 
@@ -137,6 +139,7 @@ static const char* usage_str =
     "                           (experimental)\n"
     "  -s, --share-dir=<path>   directory path for creating status file\n"
     "  -v, --verbose            print noisy outputs\n"
+    "  -N, --no-mount-unifyfs   don't mount unifyfs file system (for testing)\n"
     "\n"
     "Without the '-p, --parallel' option, a file is transferred by a single\n"
     "process. If the '-p, --parallel' option is specified, each file will be\n"
@@ -210,6 +213,10 @@ static int parse_option(int argc, char** argv)
             verbose = 1;
             break;
 
+        case 'N':
+            should_we_mount_unifyfs = 0;
+            break;
+
         case 'h':
         default:
             break;
@@ -220,12 +227,18 @@ static int parse_option(int argc, char** argv)
         return EINVAL;
     }
 
+    if ((mountpoint) &&
+        (should_we_mount_unifyfs == 0)) {
+        fprintf(stderr, "You specified a mountpoint AND no-mount-unifyfs!\n");
+        return EINVAL;
+    }
+
     filepath = argv[optind];
 
     manifest_file = realpath(filepath, NULL);
     if (!manifest_file) {
         fprintf(stderr, "problem with accessing file %s: %s\n",
-                        filepath, strerror(errno));
+                filepath, strerror(errno));
         return errno;
     }
 
@@ -266,11 +279,13 @@ int main(int argc, char** argv)
         debug_pause(rank, "About to mount unifyfs.. ");
     }
 
-    ret = unifyfs_mount(mountpoint, rank, total_ranks, 0);
-    if (ret) {
-        fprintf(stderr, "failed to mount unifyfs at %s (%s)",
-                        ctx->mountpoint, strerror(ret));
-        goto out;
+    if (should_we_mount_unifyfs) {
+        ret = unifyfs_mount(mountpoint, rank, total_ranks, 0);
+        if (ret) {
+            fprintf(stderr, "failed to mount unifyfs at %s (%s)",
+                    ctx->mountpoint, strerror(ret));
+            goto out;
+        }
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -284,13 +299,15 @@ int main(int argc, char** argv)
         ret = create_status_file(ret);
         if (ret) {
             fprintf(stderr, "failed to create the status file (%s)\n",
-                            strerror(errno));
+                    strerror(errno));
         }
     }
 
-    ret = unifyfs_unmount();
-    if (ret) {
-        fprintf(stderr, "unmounting unifyfs failed (ret=%d)\n", ret);
+    if (should_we_mount_unifyfs) {
+        ret = unifyfs_unmount();
+        if (ret) {
+            fprintf(stderr, "unmounting unifyfs failed (ret=%d)\n", ret);
+        }
     }
 out:
     MPI_Finalize();
