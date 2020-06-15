@@ -41,8 +41,10 @@ test_expect_success "config_0700 directory is empty" '
     test_dir_is_empty ${UNIFYFS_TEST_TMPDIR}/config_0700
 '
 
-echo "\"${UNIFYFS_TEST_TMPDIR}/stage_source/source.file\" \"/unifyfs/intermediate.file\""  > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_IN.manifest
-echo "\"/unifyfs/intermediate.file\" \"${UNIFYFS_TEST_TMPDIR}/stage_destination_0700/destination_0700.file\"" > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_OUT.manifest
+#echo "\"${UNIFYFS_TEST_TMPDIR}/stage_source/source.file\" \"/unifyfs/intermediate.file\""  > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_IN.manifest
+#echo "\"/unifyfs/intermediate.file\" \"${UNIFYFS_TEST_TMPDIR}/stage_destination_0700/destination_0700.file\"" > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_OUT.manifest
+echo "\"${UNIFYFS_TEST_TMPDIR}/stage_source/source.file\" \"${UNIFYFS_TEST_MOUNT}/intermediate.file\""  > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_IN.manifest
+echo "\"${UNIFYFS_TEST_MOUNT}/intermediate.file\" \"${UNIFYFS_TEST_TMPDIR}/stage_destination_0700/destination_0700.file\"" > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_OUT.manifest
 
 test_expect_success "config_0700 directory now has manifest files" '
     test_path_is_file  ${UNIFYFS_TEST_TMPDIR}/config_0700/test_IN.manifest
