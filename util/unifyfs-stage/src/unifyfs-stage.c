@@ -155,7 +155,7 @@ static void print_usage(void)
     }
 }
 
-static inline
+static
 void debug_pause(int rank, const char* fmt, ...)
 {
     if (rank == 0) {
