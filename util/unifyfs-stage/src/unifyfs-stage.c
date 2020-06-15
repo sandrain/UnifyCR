@@ -214,6 +214,7 @@ static int parse_option(int argc, char** argv)
             break;
 
         case 'N':
+            fprintf(stderr,"WARNING: not mounting unifyfs file system!\n");
             should_we_mount_unifyfs = 0;
             break;
 
@@ -224,12 +225,6 @@ static int parse_option(int argc, char** argv)
     }
 
     if (argc - optind != 1) {
-        return EINVAL;
-    }
-
-    if ((mountpoint) &&
-        (should_we_mount_unifyfs == 0)) {
-        fprintf(stderr, "You specified a mountpoint AND no-mount-unifyfs!\n");
         return EINVAL;
     }
 
