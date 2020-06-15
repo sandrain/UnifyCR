@@ -52,10 +52,6 @@ test_expect_success "target directory is empty" '
     test_dir_is_empty ${UNIFYFS_TEST_TMPDIR}/stage_destination_9300
 '
 
-#${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -m ${UNIFYFS_TEST_MOUNT} ${UNIFYFS_TEST_TMPDIR}/config_9300/test_INOUT.manifest > ${UNIFYFS_TEST_TMPDIR}/config_9300/stage_INOUT_output.OUT 2>&1 
-#${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -m ${UNIFYFS_TEST_MOUNT} ${UNIFYFS_TEST_TMPDIR}/config_9300/test_INOUT.manifest > ${UNIFYFS_TEST_TMPDIR}/config_9300/stage_INOUT_output.OUT 2>&1 
-#${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -m ${UNIFYFS_TEST_MOUNT} ${UNIFYFS_TEST_TMPDIR}/config_9300/test_OUT.manifest > ${UNIFYFS_TEST_TMPDIR}/config_9300/stage_OUT_output.OUT 2>&1 
-
 ${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -N ${UNIFYFS_TEST_TMPDIR}/config_9300/test_INOUT.manifest > ${UNIFYFS_TEST_TMPDIR}/config_9300/stage_INOUT_output.OUT 2>&1 
 
 test_expect_success "input file has been staged to output" '

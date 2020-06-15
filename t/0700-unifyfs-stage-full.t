@@ -41,8 +41,6 @@ test_expect_success "config_0700 directory is empty" '
     test_dir_is_empty ${UNIFYFS_TEST_TMPDIR}/config_0700
 '
 
-#echo "\"${UNIFYFS_TEST_TMPDIR}/stage_source/source.file\" \"/unifyfs/intermediate.file\""  > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_IN.manifest
-#echo "\"/unifyfs/intermediate.file\" \"${UNIFYFS_TEST_TMPDIR}/stage_destination_0700/destination_0700.file\"" > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_OUT.manifest
 echo "\"${UNIFYFS_TEST_TMPDIR}/stage_source/source.file\" \"${UNIFYFS_TEST_MOUNT}/intermediate.file\""  > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_IN.manifest
 echo "\"${UNIFYFS_TEST_MOUNT}/intermediate.file\" \"${UNIFYFS_TEST_TMPDIR}/stage_destination_0700/destination_0700.file\"" > ${UNIFYFS_TEST_TMPDIR}/config_0700/test_OUT.manifest
 
@@ -55,19 +53,9 @@ test_expect_success "target directory is empty" '
     test_dir_is_empty ${UNIFYFS_TEST_TMPDIR}/stage_destination_0700
 '
 
-sleep 5
-
 ${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -m ${UNIFYFS_TEST_MOUNT} ${UNIFYFS_TEST_TMPDIR}/config_0700/test_IN.manifest > ${UNIFYFS_TEST_TMPDIR}/config_0700/stage_IN_output.OUT 2>&1 
 
-sleep 5
-
 ${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -m ${UNIFYFS_TEST_MOUNT} ${UNIFYFS_TEST_TMPDIR}/config_0700/test_OUT.manifest > ${UNIFYFS_TEST_TMPDIR}/config_0700/stage_OUT_output.OUT 2>&1 
-
-sleep 5
-
-#${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -m ${UNIFYFS_TEST_MOUNT} ${UNIFYFS_TEST_TMPDIR}/config_0700/test.manifest > ${UNIFYFS_TEST_TMPDIR}/config_0700/stage_output.OUT 2>&1 
-#${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage -N ${UNIFYFS_TEST_TMPDIR}/config_0700/test.manifest > ${UNIFYFS_TEST_TMPDIR}/config_0700/stage_output.OUT 2>&1 
-#${SHARNESS_BUILD_DIRECTORY}/util/unifyfs-stage/src/unifyfs-stage ${UNIFYFS_TEST_TMPDIR}/config_0700/test.manifest > ${UNIFYFS_TEST_TMPDIR}/config_0700/stage_output.OUT 2>&1 
 
 test_expect_success "input file has been staged to output" '
     test_path_is_file ${UNIFYFS_TEST_TMPDIR}/stage_destination_0700/destination_0700.file
