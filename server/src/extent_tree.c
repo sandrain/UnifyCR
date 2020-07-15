@@ -411,8 +411,8 @@ int extent_tree_truncate(
         /* got at least one extent left, update maximum field */
         tree->max = node->end;
     } else {
-        /* no extents left in the tree, set max back to -1 */
-        tree->max = -1;
+        /* no extents left in the tree, set max back to 0 */
+        tree->max = 0;
     }
 
     /* done reading the tree */
@@ -529,7 +529,7 @@ void extent_tree_clear(struct extent_tree* extent_tree)
     }
 
     extent_tree->count = 0;
-    extent_tree->max   = -1;
+    extent_tree->max   = 0;
     extent_tree_unlock(extent_tree);
 }
 
@@ -543,19 +543,10 @@ unsigned long extent_tree_count(struct extent_tree* extent_tree)
 }
 
 /* Return the maximum ending logical offset in the tree */
-unsigned long extent_tree_max(struct extent_tree* extent_tree)
+unsigned long extent_tree_max_offset(struct extent_tree* extent_tree)
 {
     extent_tree_rdlock(extent_tree);
     unsigned long max = extent_tree->max;
-    extent_tree_unlock(extent_tree);
-    return max;
-}
-
-/* Returns the size of the local extents (local file size) */
-unsigned long extent_tree_get_size(struct extent_tree* extent_tree)
-{
-    extent_tree_rdlock(extent_tree);
-    unsigned long max = extent_tree->max + 1;
     extent_tree_unlock(extent_tree);
     return max;
 }

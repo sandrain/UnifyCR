@@ -127,7 +127,7 @@ unifyfs_file_attr_update(unifyfs_file_attr_t* dst, unifyfs_file_attr_t* src)
     }
 
 #if 0
-    /* this function is curretnly used in the server context, when
+    /* this function is currently used in the server context, when
      * the server receives attributes from client. the file size should be
      * maintained by the server, so we skip updating the size.
      */
