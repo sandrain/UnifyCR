@@ -254,23 +254,6 @@ static struct extent_tree* inode_get_extent_tree(struct unifyfs_inode* ino)
     return tree;
 }
 
-/*
- * @ino should be properly locked by the caller
- */
-static uint64_t inode_calculate_filesize(struct unifyfs_inode* ino)
-{
-    uint64_t size = 0;
-
-    if (ino->extents) {
-        size = extent_tree_max(ino->extents);
-        if (extent_tree_count(ino->extents)) {
-            size += 1;
-        }
-    }
-
-    return size;
-}
-
 int unifyfs_inode_add_extents(int gfid, int num_extents,
                               struct extent_tree_node* nodes)
 {
@@ -297,7 +280,6 @@ int unifyfs_inode_add_extents(int gfid, int num_extents,
             }
 
             tree = inode_get_extent_tree(ino);
-
             if (!tree) { /* failed to create one */
                 ret = ENOMEM;
                 goto out_unlock_inode;
@@ -320,9 +302,15 @@ int unifyfs_inode_add_extents(int gfid, int num_extents,
                 }
             }
 
-            ino->attr.size = inode_calculate_filesize(ino);
+            /* if the extent tree max offset is greater than the size we
+             * we currently have in the inode attributes, then update the
+             * inode size */
+            unsigned long extent_sz = extent_tree_max_offset(ino->extents) + 1;
+            if ((uint64_t)extent_sz > ino->attr.size) {
+                ino->attr.size = extent_sz;
+            }
 
-            LOGDBG("added %d extents to inode (gfid=%d, filesize=%lu)",
+            LOGDBG("added %d extents to inode (gfid=%d, filesize=%" PRIu64 ")",
                    num_extents, gfid, ino->attr.size);
 
         }
@@ -351,8 +339,8 @@ int unifyfs_inode_get_filesize(int gfid, size_t* offset)
 
         unifyfs_inode_rdlock(ino);
         {
-            /* the size is calculated each time we add extents. so, we don't
-             * have to recalculate using inode_calculate_filesize() */
+            /* the size is updated each time we add extents or truncate,
+             * so no need to recalculate */
             filesize = ino->attr.size;
         }
         unifyfs_inode_unlock(ino);

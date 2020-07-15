@@ -18,7 +18,7 @@ struct extent_tree {
     RB_HEAD(inttree, extent_tree_node) head;
     pthread_rwlock_t rwlock;
     unsigned long count;     /* number of segments stored in tree */
-    long max;                /* maximum logical offset value in the tree */
+    unsigned long max;       /* maximum logical offset value in the tree */
 };
 
 /* Returns 0 on success, positive non-zero error code otherwise */
@@ -93,10 +93,7 @@ struct extent_tree_node* extent_tree_iter(
 unsigned long extent_tree_count(struct extent_tree* extent_tree);
 
 /* Return the maximum ending logical offset in the tree */
-unsigned long extent_tree_max(struct extent_tree* extent_tree);
-
-/* Returns the size of the local extents (local file size) */
-unsigned long extent_tree_get_size(struct extent_tree* extent_tree);
+unsigned long extent_tree_max_offset(struct extent_tree* extent_tree);
 
 /*
  * Locking functions for use with extent_tree_iter().  They allow you to
@@ -165,12 +162,12 @@ static inline void extent_tree_dump(struct extent_tree *extent_tree)
         return;
 
     extent_tree_rdlock(extent_tree);
- 
+
     struct extent_tree_node *node = NULL;
     while ((node = extent_tree_iter(extent_tree, node))) {
        LOGDBG("[%lu-%lu]", node->start, node->end);
     }
- 
+
     extent_tree_unlock(extent_tree);
 }
 
