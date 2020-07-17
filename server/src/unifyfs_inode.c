@@ -218,10 +218,10 @@ int unifyfs_inode_truncate(int gfid, unsigned long size)
                 ret = EINVAL;
                 goto unlock_inode;
             }
+            ino->attr.size = size;
 
-            ret = extent_tree_truncate(ino->extents, size);
-            if (ret == 0) {
-                ino->attr.size = size;
+            if (NULL != ino->extents) {
+                ret = extent_tree_truncate(ino->extents, size);
             }
         }
 unlock_inode:
