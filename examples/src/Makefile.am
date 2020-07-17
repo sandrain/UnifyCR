@@ -258,17 +258,17 @@ write_static_CPPFLAGS = $(test_cppflags)
 write_static_LDADD    = $(test_static_ldadd)
 write_static_LDFLAGS  = $(test_static_ldflags)
 
-writeread_posix_SOURCES  = writeread.c
+writeread_posix_SOURCES  = writeread.c testutil.c
 writeread_posix_CPPFLAGS = $(test_posix_cppflags)
 writeread_posix_LDADD    = $(test_posix_ldadd)
 writeread_posix_LDFLAGS  = $(test_posix_ldflags)
 
-writeread_gotcha_SOURCES  = writeread.c
+writeread_gotcha_SOURCES  = writeread.c testutil.c
 writeread_gotcha_CPPFLAGS = $(test_cppflags)
 writeread_gotcha_LDADD    = $(test_gotcha_ldadd)
 writeread_gotcha_LDFLAGS  = $(test_gotcha_ldflags)
 
-writeread_static_SOURCES  = writeread.c
+writeread_static_SOURCES  = writeread.c testutil.c
 writeread_static_CPPFLAGS = $(test_cppflags)
 writeread_static_LDADD    = $(test_static_ldadd)
 writeread_static_LDFLAGS  = $(test_static_ldflags)
