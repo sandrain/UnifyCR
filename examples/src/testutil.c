@@ -276,7 +276,7 @@ int stat_cmd(test_cfg* cfg, char* filename)
 
     rc = stat(filename, &sb);
     if (rc) {
-        test_print(cfg, "Error stating %s: %s", filename, strerror(rc));
+        test_print(cfg, "ERROR: stat(%s) - %s", filename, strerror(rc));
         return rc;
     }
 
@@ -312,10 +312,11 @@ int stat_cmd(test_cfg* cfg, char* filename)
     test_print(cfg, "%-26s%s", tmp, typestr);
     free(tmp);
 
-    test_print(cfg, "Device containing i-node: major=%ld   minor=%ld",
+    test_print(cfg, "Device containing i-node:  major=%ld   minor=%ld",
            (long) major(sb.st_dev), (long) minor(sb.st_dev));
 
-    test_print(cfg, "I-node number:            %ld", (long) sb.st_ino);
+    test_print(cfg, "I-node number:            %lu",
+        (unsigned long) sb.st_ino);
 
     test_print(cfg, "Mode:                     %lo",
            (unsigned long) sb.st_mode);
@@ -327,7 +328,8 @@ int stat_cmd(test_cfg* cfg, char* filename)
                (sb.st_mode & S_ISVTX) ? "sticky " : "");
     }
 
-    test_print(cfg, "Number of (hard) links:   %ld", (long) sb.st_nlink);
+    test_print(cfg, "Number of (hard) links:   %lu",
+        (unsigned long) sb.st_nlink);
 
     test_print(cfg, "Ownership:                UID=%ld   GID=%ld",
            (long) sb.st_uid, (long) sb.st_gid);
@@ -337,11 +339,12 @@ int stat_cmd(test_cfg* cfg, char* filename)
                (long) major(sb.st_rdev), (long) minor(sb.st_rdev));
     }
 
-    test_print(cfg, "File size:                %lld bytes",
-        (long long) sb.st_size);
-    test_print(cfg, "Optimal I/O block size:   %ld bytes",
-        (long) sb.st_blksize);
-    test_print(cfg, "Blocks allocated:         %lld", (long long) sb.st_blocks);
+    test_print(cfg, "File size:                %llu bytes",
+        (unsigned long long) sb.st_size);
+    test_print(cfg, "Optimal I/O block size:   %lu bytes",
+        (unsigned long) sb.st_blksize);
+    test_print(cfg, "Blocks allocated:         %llu",
+        (unsigned long long) sb.st_blocks);
     test_print(cfg, "Last file access:         %s", ctime(&sb.st_atime));
     test_print(cfg, "Last file modification:   %s", ctime(&sb.st_mtime));
     test_print(cfg, "Last status change:       %s", ctime(&sb.st_ctime));

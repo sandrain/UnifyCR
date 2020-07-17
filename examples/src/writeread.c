@@ -302,7 +302,7 @@ int main(int argc, char* argv[])
 
     // stat file post-laminate
     timer_start_barrier(cfg, &time_stat_post);
-    stat_file(cfg, target_file);
+    stat_cmd(cfg, target_file);
     timer_stop_barrier(cfg, &time_stat_post);
     test_print_verbose_once(cfg, "DEBUG: finished stat post");
 
@@ -310,8 +310,6 @@ int main(int argc, char* argv[])
     free(wr_buf);
     free(reqs);
     reqs = NULL;
-
-    // open file
 
     // generate read requests
     test_print_verbose_once(cfg, "DEBUG: generating read requests");
