@@ -171,6 +171,9 @@ void unifyfs_file_attr_to_stat(unifyfs_file_attr_t* fattr, struct stat* sb)
         sb->st_gid = fattr->gid;
         sb->st_rdev = UNIFYFS_STAT_DEFAULT_DEV;
         sb->st_size = fattr->size;
+
+        /* TODO: use cfg.logio_chunk_size here for st_blksize
+         *       and report acutal chunks allocated for st_blocks */
         sb->st_blksize = UNIFYFS_STAT_DEFAULT_BLKSIZE;
         sb->st_blocks = fattr->size / UNIFYFS_STAT_DEFAULT_BLKSIZE;
         if (fattr->size % UNIFYFS_STAT_DEFAULT_BLKSIZE > 0) {
