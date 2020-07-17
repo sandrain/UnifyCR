@@ -166,6 +166,12 @@ size_t generate_read_reqs(test_cfg* cfg, char* dstbuf,
  *
  *    cfg.io_check - when enabled, lipsum data is used when writing
  *    the file and verified when reading.
+ *
+ *    cfg.pre_wr_truncate - when enabled, truncate the file to specified
+ *    size before writing.
+ *
+ *    cfg.post_wr_truncate - when enabled, truncate the file to specified
+ *    size after writing.
  */
 
 int main(int argc, char* argv[])
@@ -229,6 +235,10 @@ int main(int argc, char* argv[])
     timer_stop_barrier(cfg, &time_create);
     test_print_verbose_once(cfg, "DEBUG: finished create");
 
+    if (cfg->pre_wr_trunc) {
+        write_truncate(cfg);
+    }
+
     // generate write requests
     test_print_verbose_once(cfg, "DEBUG: generating write requests");
     wr_buf = calloc(test_config.n_blocks, test_config.block_sz);
@@ -253,6 +263,10 @@ int main(int argc, char* argv[])
     }
     timer_stop_barrier(cfg, &time_wr);
     test_print_verbose_once(cfg, "DEBUG: finished write requests");
+
+    if (cfg->post_wr_trunc) {
+        write_truncate(cfg);
+    }
 
     // sync
     timer_start_barrier(cfg, &time_sync);

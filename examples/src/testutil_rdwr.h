@@ -188,6 +188,29 @@ int wait_write_req_batch(test_cfg* cfg, size_t n_reqs, struct aiocb* reqs)
 }
 
 static inline
+int write_truncate(test_cfg* cfg)
+{
+    int rc = 0;
+
+    if (cfg->use_mpiio) {
+        MPI_Offset mpi_off = (MPI_Offset) cfg->trunc_size;
+        MPI_CHECK(cfg, (MPI_File_set_size(cfg->mpifh, mpi_off)));
+    } else {
+        if (cfg->rank == 0 || cfg->io_pattern == IO_PATTERN_NN) {
+            if (-1 != cfg->fd) { // ftruncate(2)
+                rc = ftruncate(cfg->fd, cfg->trunc_size);
+                if (-1 == rc) {
+                    test_print(cfg, "ftruncate() failed");
+                    return -1;
+                }
+            }
+        }
+    }
+
+    return rc;
+}
+
+static inline
 int write_sync(test_cfg* cfg)
 {
     int rc;
