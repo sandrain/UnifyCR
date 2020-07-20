@@ -87,8 +87,6 @@ static int server_pid_invoke_rpc(void)
 static void server_pid_handle_rpc(hg_handle_t handle)
 {
     int ret = 0;
-    int i = 0;
-    int count = 0;
     hg_return_t hret = 0;
     server_pid_in_t in;
     server_pid_out_t out;
@@ -196,7 +194,7 @@ int unifyfs_publish_server_pids(void)
             return ret;
         }
 
-        pthead_mutex_lock(&server_pid_mutex);
+        pthread_mutex_lock(&server_pid_mutex);
         server_pids[0] = server_pid;
 
         if (glb_pmi_size > 1) {
@@ -204,7 +202,7 @@ int unifyfs_publish_server_pids(void)
              * or we hit the timeout */
             do {
                 int count = 0;
-                for (i = 0; i < glb_pmi_size; i++) {
+                for (int i = 0; i < glb_pmi_size; i++) {
                     if (server_pids[i] > 0) {
                         count++;
                     }
