@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -334,6 +335,68 @@ release_add:
     seg_tree_unlock(seg_tree);
 
     return rc;
+}
+
+/*
+ * Remove or truncate one or more entries from the range tree
+ * if they overlap [start, end].
+ *
+ * Returns 0 on success, nonzero otherwise.
+ */
+int seg_tree_remove(
+    struct seg_tree* seg_tree,
+    unsigned long start,
+    unsigned long end)
+{
+    struct seg_tree_node* node;
+
+    seg_tree_wrlock(seg_tree);
+    node = seg_tree_find_nolock(seg_tree, start, end);
+    while (node != NULL) {
+        if (start <= node->start) {
+            if (node->end <= end) {
+                /* start <= node_s <= node_e <= end
+                 * remove whole extent */
+                RB_REMOVE(inttree, &seg_tree->head, node);
+                free(node);
+                seg_tree->count--;
+            } else {
+                /* start <= node_s <= end < node_e
+                 * update node start */
+                node->start = end + 1;
+            }
+        } else if (node->start < start) {
+            if (node->end <= end) {
+                /* node_s < start <= node_e <= end
+                 * truncate node */
+                node->end = start - 1;
+            } else {
+                /* node_s < start <= end < node_e
+                 * extent spans entire region, split into two nodes
+                 * representing before/after region */
+                unsigned long a_end = node->end;
+                unsigned long a_start = end + 1;
+                unsigned long a_ptr = node->ptr + (a_start - node->start);
+
+                /* truncate existing (before) node */
+                node->end = start - 1;
+
+                /* add new (after) node */
+                seg_tree_unlock(seg_tree);
+                int rc = seg_tree_add(seg_tree, a_start, a_end, a_ptr);
+                if (rc) {
+                    LOGERR("seg_tree_add() failed when splitting");
+                    return rc;
+                }
+                seg_tree_wrlock(seg_tree);
+            }
+        }
+        /* keep looking for nodes that overlap target region */
+        node = seg_tree_find_nolock(seg_tree, start, end);
+    }
+    seg_tree_unlock(seg_tree);
+
+    return 0;
 }
 
 /*
