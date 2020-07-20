@@ -508,7 +508,7 @@ static
 int truncate_forward(const unifyfs_tree_t* broadcast_tree, truncate_in_t* in)
 {
     LOGDBG("MARGOTREE: truncate forward - gfid=%d size=%lu",
-           (int)in.gfid, (unsigned long)in.filesize);
+           (int)in->gfid, (unsigned long)in->filesize);
 
     hg_return_t hret;
     int rc, ret;
