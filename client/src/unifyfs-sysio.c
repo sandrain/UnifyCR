@@ -539,14 +539,6 @@ int UNIFYFS_WRAP(truncate)(const char* path, off_t length)
         /* get file id for path name */
         int fid = unifyfs_get_fid_from_path(upath);
         if (fid >= 0) {
-            /* before we truncate, sync any data cached this file id */
-            int ret = unifyfs_fid_sync(fid);
-            if (ret != UNIFYFS_SUCCESS) {
-                /* sync failed for some reason, set errno and return error */
-                errno = unifyfs_rc_errno(ret);
-                return -1;
-            }
-
             /* got the file locally, use fid_truncate the file */
             int rc = unifyfs_fid_truncate(fid, length);
             if (rc != UNIFYFS_SUCCESS) {
@@ -1821,14 +1813,6 @@ int UNIFYFS_WRAP(ftruncate)(int fd, off_t length)
         unifyfs_fd_t* filedesc = unifyfs_get_filedesc_from_fd(fd);
         if (!filedesc->write) {
             errno = EBADF;
-            return -1;
-        }
-
-        /* before we truncate, sync any data cached this file id */
-        int ret = unifyfs_fid_sync(fid);
-        if (ret != UNIFYFS_SUCCESS) {
-            /* sync failed for some reason, set errno and return error */
-            errno = unifyfs_rc_errno(ret);
             return -1;
         }
 

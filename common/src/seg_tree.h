@@ -38,6 +38,18 @@ int seg_tree_add(struct seg_tree* seg_tree, unsigned long start,
     unsigned long end, unsigned long ptr);
 
 /*
+ * Remove or truncate one or more entries from the range tree
+ * if they overlap [start, end].
+ *
+ * Returns 0 on success, nonzero otherwise.
+ */
+int seg_tree_remove(
+    struct seg_tree* seg_tree,
+    unsigned long start,
+    unsigned long end
+);
+
+/*
  * Find the first seg_tree_node that falls in a [start, end] range.
  */
 struct seg_tree_node* seg_tree_find(

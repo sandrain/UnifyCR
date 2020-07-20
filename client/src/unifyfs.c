@@ -1692,21 +1692,32 @@ int unifyfs_fid_truncate(int fid, off_t length)
         return EINVAL;
     }
 
-    /* determine file storage type */
-    if (meta->storage == FILE_STORAGE_LOGIO) {
-        /* invoke truncate rpc */
-        int gfid = unifyfs_gfid_from_fid(fid);
-        int rc = invoke_client_truncate_rpc(gfid, length);
-        if (rc != UNIFYFS_SUCCESS) {
-            return rc;
-        }
-
-        /* truncate succeeded, update global size to
-         * reflect truncated size, note log size is not affected */
-        meta->global_size = length;
-    } else {
+    if (meta->storage != FILE_STORAGE_LOGIO) {
         /* unknown storage type */
         return EIO;
+    }
+
+    /* remove/update writes past truncation size for this file id */
+    int rc = truncate_write_meta(meta, length);
+    if (rc != UNIFYFS_SUCCESS) {
+        return rc;
+    }
+
+    /* truncate is a sync point */
+    rc = unifyfs_fid_sync(fid);
+    if (rc != UNIFYFS_SUCCESS) {
+        return rc;
+    }
+
+    /* update global size in filemeta to reflect truncated size.
+     * note that log size is not affected */
+    meta->global_size = length;
+
+    /* invoke truncate rpc */
+    int gfid = unifyfs_gfid_from_fid(fid);
+    rc = invoke_client_truncate_rpc(gfid, length);
+    if (rc != UNIFYFS_SUCCESS) {
+        return rc;
     }
 
     return UNIFYFS_SUCCESS;
