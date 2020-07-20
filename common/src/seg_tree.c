@@ -351,6 +351,8 @@ int seg_tree_remove(
 {
     struct seg_tree_node* node;
 
+    LOGDBG("removing extents overlapping [%lu, %lu]", start, end);
+
     seg_tree_wrlock(seg_tree);
     node = seg_tree_find_nolock(seg_tree, start, end);
     while (node != NULL) {
@@ -358,18 +360,23 @@ int seg_tree_remove(
             if (node->end <= end) {
                 /* start <= node_s <= node_e <= end
                  * remove whole extent */
+                LOGDBG("removing node [%lu, %lu]", node->start, node->end);
                 RB_REMOVE(inttree, &seg_tree->head, node);
                 free(node);
                 seg_tree->count--;
             } else {
                 /* start <= node_s <= end < node_e
                  * update node start */
+                LOGDBG("updating node start from %lu to %lu",
+                       node->start, (end + 1));
                 node->start = end + 1;
             }
         } else if (node->start < start) {
             if (node->end <= end) {
                 /* node_s < start <= node_e <= end
                  * truncate node */
+                LOGDBG("updating node end from %lu to %lu",
+                       node->end, (start - 1));
                 node->end = start - 1;
             } else {
                 /* node_s < start <= end < node_e
@@ -380,9 +387,12 @@ int seg_tree_remove(
                 unsigned long a_ptr = node->ptr + (a_start - node->start);
 
                 /* truncate existing (before) node */
+                LOGDBG("updating before node end from %lu to %lu",
+                       node->end, (start - 1));
                 node->end = start - 1;
 
                 /* add new (after) node */
+                LOGDBG("add after node [%lu, %lu]", a_start, a_end);
                 seg_tree_unlock(seg_tree);
                 int rc = seg_tree_add(seg_tree, a_start, a_end, a_ptr);
                 if (rc) {
