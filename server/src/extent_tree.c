@@ -398,6 +398,8 @@ int extent_tree_truncate(
             node = RB_PREV(inttree, &tree->head, node);
 
             /* remove this node from the tree and release it */
+            LOGDBG("removing node [%lu, %lu] due to truncate=%lu",
+                   node->start, node->end, size);
             RB_REMOVE(inttree, &tree->head, oldnode);
             free(oldnode);
 
