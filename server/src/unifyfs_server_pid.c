@@ -24,29 +24,23 @@
 
 extern unifyfs_cfg_t server_cfg;
 
+static int* server_pids; // = NULL
 static pthread_cond_t server_pid_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t server_pid_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct timespec server_pid_timeout;
 
-static int* server_pids;
-static pthread_mutex_t server_pid_alloc_lock = PTHREAD_MUTEX_INITIALIZER;
-
-static int alloc_server_pid(void)
+static int alloc_server_pids(void)
 {
     int ret = 0;
-
-    pthread_mutex_lock(&server_pid_alloc_lock);
-    {
-        if (!server_pids) {
-            server_pids = calloc(glb_pmi_size, sizeof(*server_pids));
-            if (!server_pids) {
-                LOGERR("failed to allocate memory (%s)", strerror(errno));
-                ret = ENOMEM;
-            }
+    pthread_mutex_lock(&server_pid_mutex);
+    if (NULL == server_pids) {
+        server_pids = (int*) calloc(glb_pmi_size, sizeof(int));
+        if (NULL == server_pids) {
+            LOGERR("failed to allocate memory (%s)", strerror(errno));
+            ret = ENOMEM;
         }
     }
-    pthread_mutex_unlock(&server_pid_alloc_lock);
-
+    pthread_mutex_unlock(&server_pid_mutex);
     return ret;
 }
 
@@ -105,15 +99,15 @@ static void server_pid_handle_rpc(hg_handle_t handle)
         return;
     }
 
-    if (!server_pids) {
-        ret = alloc_server_pid();
-        if (ret) {
-            LOGERR("failed to allocate pid array");
-            return;
-        }
+    ret = alloc_server_pids();
+    if (ret) {
+        LOGERR("failed to allocate pid array");
+        return;
     }
-
-    server_pids[in.rank] = in.pid;
+    assert((int)in.rank < glb_pmi_size);
+    pthread_mutex_lock(&server_pid_mutex);
+    server_pids[in.rank] = (int) in.pid;
+    pthread_mutex_unlock(&server_pid_mutex);
 
     out.ret = 0;
     hret = margo_respond(handle, &out);
@@ -125,22 +119,14 @@ static void server_pid_handle_rpc(hg_handle_t handle)
     margo_free_input(handle, &in);
     margo_destroy(handle);
 
-    for (i = 0; i < glb_pmi_size; i++) {
-        if (server_pids[i] > 0) {
-            count++;
-        }
-    }
-
-    if (count == glb_pmi_size) {
-        ret = pthread_cond_signal(&server_pid_cond);
-        if (ret) {
-            LOGERR("failed to signal condition (%s)", strerror(ret));
-        }
+    ret = pthread_cond_signal(&server_pid_cond);
+    if (ret) {
+        LOGERR("failed to signal condition (%s)", strerror(ret));
     }
 }
 DEFINE_MARGO_RPC_HANDLER(server_pid_handle_rpc);
 
-static inline int set_timeout(void)
+static inline int set_pidfile_timeout(void)
 {
     int ret = 0;
     long timeout_sec = 0;
@@ -194,48 +180,60 @@ int unifyfs_publish_server_pids(void)
     int ret = UNIFYFS_SUCCESS;
 
     if (glb_pmi_rank > 0) {
+        /* publish my pid to server 0 */
         ret = server_pid_invoke_rpc();
         if (ret) {
             LOGERR("failed to invoke pid rpc (%s)", strerror(ret));
         }
     } else {
-        ret = set_timeout();
+        ret = alloc_server_pids();
         if (ret) {
             return ret;
         }
 
-        if (!server_pids) {
-            ret = alloc_server_pid();
-            if (ret) {
-                return ret;
-            }
+        ret = set_pidfile_timeout();
+        if (ret) {
+            return ret;
         }
 
+        pthead_mutex_lock(&server_pid_mutex);
         server_pids[0] = server_pid;
 
         if (glb_pmi_size > 1) {
-            ret = pthread_cond_timedwait(&server_pid_cond,
-                                         &server_pid_mutex,
-                                         &server_pid_timeout);
-            if (ETIMEDOUT == ret) {
-                LOGERR("some servers failed to initialize within timeout");
-                goto out;
-            } else if (ret) {
-                LOGERR("failed to wait on condition (err=%d, %s)",
-                       errno, strerror(errno));
-                goto out;
-            }
+            /* keep checking count of reported servers until all have reported
+             * or we hit the timeout */
+            do {
+                int count = 0;
+                for (i = 0; i < glb_pmi_size; i++) {
+                    if (server_pids[i] > 0) {
+                        count++;
+                    }
+                }
+                if (count == glb_pmi_size) {
+                    ret = create_server_pid_file();
+                    if (UNIFYFS_SUCCESS == ret) {
+                        LOGDBG("servers ready to accept client connections");
+                    }
+                    break;
+                }
+                ret = pthread_cond_timedwait(&server_pid_cond,
+                                             &server_pid_mutex,
+                                             &server_pid_timeout);
+                if (ETIMEDOUT == ret) {
+                    LOGERR("some servers failed to initialize within timeout");
+                    break;
+                } else if (ret) {
+                    LOGERR("failed to wait on condition (err=%d, %s)",
+                           errno, strerror(errno));
+                    break;
+                }
+            } while (1);
         }
 
-        ret = create_server_pid_file();
-        if (UNIFYFS_SUCCESS == ret) {
-            LOGDBG("all servers are ready to accept client connection");
-        }
-    }
-out:
-    if (server_pids) {
         free(server_pids);
         server_pids = NULL;
+
+        pthread_mutex_unlock(&server_pid_mutex);
     }
 
     return ret;
