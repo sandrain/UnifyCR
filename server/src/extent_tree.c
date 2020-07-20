@@ -372,6 +372,11 @@ int extent_tree_truncate(
     struct extent_tree* tree, /* tree to truncate */
     unsigned long size)       /* size to truncate extents to */
 {
+    if (0 == size) {
+        extent_tree_clear(tree);
+        return 0;
+    }
+
     /* lock the tree for reading */
     extent_tree_wrlock(tree);
 
