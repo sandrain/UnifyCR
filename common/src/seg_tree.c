@@ -38,6 +38,7 @@
 
 #include "seg_tree.h"
 #include "tree.h"
+#include "unifyfs_log.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
