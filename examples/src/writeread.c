@@ -264,10 +264,6 @@ int main(int argc, char* argv[])
     timer_stop_barrier(cfg, &time_wr);
     test_print_verbose_once(cfg, "DEBUG: finished write requests");
 
-    if (cfg->post_wr_trunc) {
-        write_truncate(cfg);
-    }
-
     // sync
     timer_start_barrier(cfg, &time_sync);
     rc = write_sync(cfg);
@@ -277,19 +273,21 @@ int main(int argc, char* argv[])
     timer_stop_barrier(cfg, &time_sync);
     test_print_verbose_once(cfg, "DEBUG: finished sync");
 
-    // close file
-
     // stat file pre-laminate
     timer_start_barrier(cfg, &time_stat_pre);
     stat_file(cfg, target_file);
     timer_stop_barrier(cfg, &time_stat_pre);
-    test_print_verbose_once(cfg, "DEBUG: finished stat pre");
+    test_print_verbose_once(cfg, "DEBUG: finished stat pre-laminate");
 
-    // stat file pre-laminate (again)
-    timer_start_barrier(cfg, &time_stat_pre2);
-    stat_file(cfg, target_file);
-    timer_stop_barrier(cfg, &time_stat_pre2);
-    test_print_verbose_once(cfg, "DEBUG: finished stat pre2");
+    if (cfg->post_wr_trunc) {
+        write_truncate(cfg);
+
+        // stat file post-truncate
+        timer_start_barrier(cfg, &time_stat_pre2);
+        stat_file(cfg, target_file);
+        timer_stop_barrier(cfg, &time_stat_pre2);
+        test_print_verbose_once(cfg, "DEBUG: finished stat pre2 (post trunc)");
+    }
 
     // laminate
     timer_start_barrier(cfg, &time_laminate);
@@ -304,7 +302,7 @@ int main(int argc, char* argv[])
     timer_start_barrier(cfg, &time_stat_post);
     stat_cmd(cfg, target_file);
     timer_stop_barrier(cfg, &time_stat_post);
-    test_print_verbose_once(cfg, "DEBUG: finished stat post");
+    test_print_verbose_once(cfg, "DEBUG: finished stat post-laminate");
 
     // post-write cleanup
     free(wr_buf);
