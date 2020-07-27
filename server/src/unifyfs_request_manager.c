@@ -434,7 +434,6 @@ int rm_submit_read_request(server_read_req_t* req)
     rdreq->app_id = req->app_id;
     rdreq->client_id = req->client_id;
     rdreq->num_remote_reads = req->num_remote_reads;
-    rdreq->extent = req->extent;
     rdreq->chunks = req->chunks;
     rdreq->remote_reads = req->remote_reads;
 
@@ -726,10 +725,11 @@ static int rm_process_remote_chunk_responses(reqmgr_thrd_t* thrd_ctrl)
 }
 
 static shm_data_meta* reserve_shmem_meta(shm_context* shmem_data,
-                                         shm_data_header* hdr,
                                          size_t data_sz)
 {
     shm_data_meta* meta = NULL;
+    shm_data_header* hdr = (shm_data_header*) shmem_data->addr;
+
     if (NULL == hdr) {
         LOGERR("invalid header");
     } else {
@@ -821,6 +821,65 @@ int rm_post_chunk_read_responses(int app_id,
     return rc;
 }
 
+static int send_data_to_client(shm_context* shm, chunk_read_resp_t* resp,
+                               char* data, size_t* bytes_processed)
+{
+    int ret = UNIFYFS_SUCCESS;
+    int errcode = 0;
+    size_t offset = 0;
+    size_t data_size = 0;
+    size_t bytes_left = 0;
+    size_t tx_size = MAX_DATA_TX_SIZE;
+    char *bufpos = data;
+    shm_data_meta* meta = NULL;
+
+    if (resp->read_rc < 0) {
+        errcode = (int) -(resp->read_rc);
+        data_size = 0;
+    } else {
+        data_size = resp->nbytes;
+    }
+
+    /* data can be larger than the shmem buffer size. split the data into
+     * pieces and send them */
+    bytes_left = data_size;
+    offset = resp->offset;
+
+    for (bytes_left = data_size; bytes_left > 0; bytes_left -= tx_size) {
+        if (bytes_left < tx_size) {
+            tx_size = bytes_left;
+        }
+
+        meta = reserve_shmem_meta(shm, tx_size);
+        if (meta) {
+            meta->gfid = resp->gfid;
+            meta->errcode = errcode;
+            meta->offset = offset; 
+            meta->length = tx_size;
+
+            LOGDBG("sending data to client (gfid=%d, offset=%zu, length=%zu) "
+                   "%zu bytes left",
+                   resp->gfid, offset, tx_size, bytes_left);
+
+            if (tx_size) {
+                void* shm_buf = (void*) ((char*) meta + sizeof(shm_data_meta));
+                memcpy(shm_buf, bufpos, tx_size);
+            }
+        } else {
+            /* do we need to stop processing and exit loop here? */
+            LOGERR("failed to reserve shmem space for read reply");
+            ret = UNIFYFS_ERROR_SHMEM;
+        }
+
+        bufpos += tx_size;
+        offset += tx_size;
+    }
+
+    *bytes_processed = data_size - bytes_left;
+
+    return ret;
+}
+
 /* process the requested chunk data returned from service managers
  *
  * @param thrd_ctrl  : request manager thread state
@@ -858,7 +917,6 @@ int rm_handle_chunk_read_responses(reqmgr_thrd_t* thrd_ctrl,
     shm_hdr = (shm_data_header*) client_shm->addr;
 
     num_chks = del_reads->num_chunks;
-    //gfid = rdreq->extent.gfid;
     if (del_reads->status != READREQ_STARTED) {
         LOGERR("chunk read response for non-started req @ index=%d",
                rdreq->req_ndx);
@@ -872,36 +930,17 @@ int rm_handle_chunk_read_responses(reqmgr_thrd_t* thrd_ctrl,
                del_reads->rank, num_chks, del_reads->total_sz);
         responses = del_reads->resp;
         data_buf = (char*)(responses + num_chks);
+
         for (i = 0; i < num_chks; i++) {
             chunk_read_resp_t* resp = responses + i;
-            gfid = resp->gfid;
-            if (resp->read_rc < 0) {
-                errcode = (int)-(resp->read_rc);
-                data_sz = 0;
-            } else {
-                errcode = 0;
-                data_sz = resp->nbytes;
-            }
-            offset = resp->offset;
-            LOGDBG("chunk response for gfid=%d (offset=%zu, sz=%zu)",
-                   gfid, offset, data_sz);
+            size_t processed = 0;
 
-            /* allocate and register local target buffer for bulk access */
-            meta = reserve_shmem_meta(client_shm, shm_hdr, data_sz);
-            if (NULL != meta) {
-                meta->offset = offset;
-                meta->length = data_sz;
-                meta->gfid = gfid;
-                meta->errcode = errcode;
-                shm_buf = (void*)((char*)meta + sizeof(shm_data_meta));
-                if (data_sz) {
-                    memcpy(shm_buf, data_buf, data_sz);
-                }
-            } else {
-                LOGERR("failed to reserve shmem space for read reply")
-                ret = (int32_t)UNIFYFS_ERROR_SHMEM;
+            ret = send_data_to_client(client_shm, resp, data_buf, &processed);
+            if (ret != UNIFYFS_SUCCESS) {
+                LOGERR("failed to send data to client (ret=%d)", ret);
             }
-            data_buf += data_sz;
+
+            data_buf += processed;
         }
 
         /* cleanup */

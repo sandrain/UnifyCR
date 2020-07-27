@@ -176,42 +176,72 @@ static int compare_chunks(const void* _c1, const void* _c2)
     }
 }
 
-static int rpc_read(unifyfs_fops_ctx_t* ctx,
-                    int gfid, off_t offset, size_t length)
+static
+int resolve_chunk_locations(int count, unifyfs_inode_chunk_t* chunk_request,
+                            unsigned int* outlen, chunk_read_req_t** out)
 {
-    int ret = 0;
-    int i;
-    int prev_rank = -1;
-    int app_id = ctx->app_id;
-    int client_id = ctx->client_id;
-    size_t data_sz = 0;
-    client_read_req_t* req = NULL;
+    int ret = UNIFYFS_SUCCESS;
+    int i = 0;
+    int j = 0;
     unsigned int n_chunks = 0;
     chunk_read_req_t* chunks = NULL;
-    int num_remote_reads = 0;
-    remote_chunk_reads_t* remote_reads = NULL;
-    server_read_req_t rdreq = { 0, };
+    chunk_read_req_t* pos = NULL;
+    unsigned int* n_resolved;
+    chunk_read_req_t** resolved;
 
-    /*
-     * we now use the inode structure instead of mdhim and can skip all
-     * key-value data structures. Basically:
-     *
-     * 1) get the list of extents (@chunks) from the inode extent tree
-     * 2) sort the @chunks according to the server ranks
-     * 3) fill the server_read_req_t
-     * 4) hand over the server_read_req_t to the delegator thread
-     */
-
-    /* 1) get the list of extents (@chunks) from the inode extent tree */
-    ret = unifyfs_inode_get_chunk_list(gfid, offset, length,
-                                        &n_chunks, &chunks);
-    if (ret) {
-        LOGERR("failed to get the chunk list from inode (err=%d)", ret);
-        return ret;
+    n_resolved = malloc((sizeof(*n_resolved) + sizeof(*resolved)) * count);
+    if (!n_resolved) {
+        LOGERR("failed to allocate memory");
+        ret = ENOMEM;
+        goto out_fail;
     }
 
-    LOGDBG("%u chunks for read(gfid=%d, offset=%lu, len=%lu):",
-           n_chunks, gfid, offset, length);
+    resolved = (chunk_read_req_t**) &n_resolved[count];
+
+    /* resolve chunks addresses for all requests from inode tree */
+    for (i = 0; i < count; i++) {
+        unifyfs_inode_chunk_t* current = &chunk_request[i];
+
+        LOGDBG("resolving chunk request (gfid=%d, offset=%lu, length=%lu)",
+               current->gfid, current->offset, current->length);
+
+        ret = unifyfs_inode_resolve_chunk_request(current, &n_resolved[i],
+                                                  &resolved[i]);
+        if (ret) {
+            LOGERR("failed to resolve the chunk request for chunk "
+                   "[gfid=%d, offset=%lu, length=%zu] (ret=%d)",
+                   current->gfid, current->offset, current->length, ret);
+            goto out_fail;
+        } else {
+            for (j = 0; j < n_resolved[i]; j++) {
+                LOGDBG("[%d] (log_app_id=%d, log_client_id=%d, "
+                       "rank=%d, log_offset=%zu)",
+                       j, resolved[i]->log_app_id, resolved[i]->log_client_id,
+                       resolved[i]->rank, resolved[i]->log_offset);
+            }
+        }
+
+        n_chunks += n_resolved[i];
+    }
+
+    /* store all chunks in a flat array */
+    chunks = calloc(n_chunks, sizeof(*chunks));
+    if (!chunks) {
+        LOGERR("failed to allocate memory for storing resolved chunks");
+        ret = ENOMEM;
+        goto out_fail;
+    }
+
+    pos = chunks;
+
+    for (i = 0; i < count; i++) {
+        for (j = 0; j < n_resolved[i]; j++) {
+            *pos = resolved[i][j];
+            pos++;
+        }
+    }
+
+    LOGDBG("resovled %u chunks for read request:", n_chunks);
 
     for (i = 0; i < n_chunks; i++) {
         chunk_read_req_t* tmp = &chunks[i];
@@ -221,9 +251,49 @@ static int rpc_read(unifyfs_fops_ctx_t* ctx,
                tmp->log_client_id, tmp->log_app_id, tmp->log_offset);
     }
 
-    /* 2) sort the @chunks according to the server ranks */
+    /* sort the requests based on delegator rank and see how many delegators we
+     * would need to ask */
     qsort(chunks, n_chunks, sizeof(*chunks), compare_chunks);
 
+    *outlen = n_chunks;
+    *out = chunks;
+
+out_fail:
+    if (ret != UNIFYFS_SUCCESS) {
+        if (chunks) {
+            free(chunks);
+            chunks = NULL;
+        }
+    }
+
+    if (n_resolved) {
+        for (i = 0; i < count; i++) {
+            if (resolved[i]) {
+                free(resolved[i]);
+            }
+        }
+
+        free(n_resolved);
+    }
+
+    return ret;
+}
+
+static int create_remote_read_requests(unsigned int n_chunks,
+                                       chunk_read_req_t* chunks,
+                                       int* outlen,
+                                       remote_chunk_reads_t** out)
+{
+    int ret = UNIFYFS_SUCCESS;
+    int i = 0;
+    int prev_rank = -1;
+    size_t data_sz = 0;
+    int num_remote_reads = 0;
+    remote_chunk_reads_t* remote_reads = NULL;
+    remote_chunk_reads_t* current = NULL;
+    chunk_read_req_t* pos = NULL;
+
+    /* count how many delegators we need to contact */
     for (i = 0; i < n_chunks; i++) {
         chunk_read_req_t* curr_chunk = &chunks[i];
         int curr_rank = curr_chunk->rank;
@@ -235,82 +305,159 @@ static int rpc_read(unifyfs_fops_ctx_t* ctx,
         prev_rank = curr_rank;
     }
 
+    /* allocate and fill the per-delegator request data structure */
     remote_reads = (remote_chunk_reads_t*) calloc(num_remote_reads,
                                                   sizeof(*remote_reads));
     if (!remote_reads) {
         LOGERR("failed to allocate memory for remote_reads");
-        goto out_free;
+        return ENOMEM;
     }
 
-    prev_rank = -1;
-    remote_chunk_reads_t* curr_read = remote_reads;
+    pos = chunks;
+    unsigned int processed = 0;
 
-    for (i = 0; i < n_chunks; i++) {
-        chunk_read_req_t* curr_chunk = &chunks[i];
-        int curr_rank = curr_chunk->rank;
+    LOGDBG("preparing remote read request for %u chunks (%d delegators)",
+           n_chunks, num_remote_reads);
 
-        if (curr_rank != prev_rank) {
-            curr_read->total_sz = data_sz;
-            data_sz = 0;
+    for (i = 0; i < num_remote_reads; i++) {
+        int rank = pos->rank;
 
-            if (prev_rank != -1) {
-                curr_read += 1;
-            }
+        current = &remote_reads[i];
+        current->rank = rank;
+        current->reqs = pos;
+
+        for ( ; pos->rank == rank && processed < n_chunks; pos++) {
+            current->total_sz += pos->nbytes;
+
+            current->num_chunks += 1;
+            processed++;
         }
 
-        prev_rank = curr_rank;
-        data_sz += curr_chunk->nbytes;
-
-        if (0 == curr_read->num_chunks) {
-            curr_read->rank = curr_rank;
-            //curr_read->rdreq_id = rdreq->req_ndx;
-            curr_read->reqs = &chunks[i];
-            curr_read->resp = NULL;
-        }
-
-        curr_read->num_chunks += 1;
+        LOGDBG("%u/%u chunks processed: delegator %d (%u chunks, %zu bytes)",
+               processed, n_chunks,
+               rank, current->num_chunks, current->total_sz);
     }
 
-    /* is this still necessary?
-     * record total data size for final delegator (if any),
-     * would have missed doing this in the above loop */
-    if (n_chunks > 0) {
-        curr_read->total_sz = data_sz;
+    *outlen = num_remote_reads;
+    *out = remote_reads;
+
+    return ret;
+}
+
+static int submit_read_request(unifyfs_fops_ctx_t* ctx, int count,
+                               unifyfs_inode_chunk_t* chunk_request)
+{
+    int ret = UNIFYFS_SUCCESS;
+    unsigned int n_chunks = 0;
+    chunk_read_req_t* chunks = NULL;
+    int n_remote_reads = 0;
+    remote_chunk_reads_t* remote_reads = NULL;
+    server_read_req_t rdreq = { 0, };
+
+    if (count <= 0 || !chunk_request) {
+        return EINVAL;
     }
 
+    LOGDBG("handling read request (%d chunk requests)", count);
+
+    /* see if we have a valid app information */
+    int app_id = ctx->app_id;
+    int client_id = ctx->client_id;
+
+    /* get application client */
+    app_client* client = get_app_client(app_id, client_id);
+    if (NULL == client) {
+        return (int) UNIFYFS_FAILURE;
+    }
+
+    /* resolve chunk locations from inode tree */
+    ret = resolve_chunk_locations(count, chunk_request, &n_chunks, &chunks);
+    if (ret) {
+        LOGERR("failed to resolve chunk locations");
+        goto out_fail;
+    }
+
+    /* prepare the read request requests */
+    ret = create_remote_read_requests(n_chunks, chunks,
+                                      &n_remote_reads, &remote_reads);
+    if (ret) {
+        LOGERR("failed to prepare the remote read requests");
+        goto out_fail;
+    }
+
+    /* fill the information of server_read_req_t and submit */
     rdreq.app_id = app_id;
     rdreq.client_id = client_id;
     rdreq.chunks = chunks;
-    rdreq.num_remote_reads = num_remote_reads;
+    rdreq.num_remote_reads = n_remote_reads;
     rdreq.remote_reads = remote_reads;
 
-    req = &rdreq.extent;
-    req->gfid = gfid;
-    req->offset = offset;
-    req->length = length;
-    req->errcode = 0;
+    ret = rm_submit_read_request(&rdreq);
 
-    return rm_submit_read_request(&rdreq);
+out_fail:
+    if (ret != UNIFYFS_SUCCESS) {
+        if (remote_reads) {
+            free(remote_reads);
+            remote_reads = NULL;
+        }
 
-out_free:
-    if (remote_reads) {
-        free(remote_reads);
-        remote_reads = NULL;
-    }
-
-    if (chunks) {
-        free(chunks);
-        chunks = NULL;
+        if (chunks) {
+            free(chunks);
+            chunks = NULL;
+        }
     }
 
     return ret;
 }
 
+static int rpc_read(unifyfs_fops_ctx_t* ctx,
+                    int gfid, off_t offset, size_t length)
+{
+    unifyfs_inode_chunk_t chunk = { 0, };
+
+    chunk.gfid = gfid;
+    chunk.offset = offset;
+    chunk.length = length;
+
+    return submit_read_request(ctx, 1, &chunk);
+}
+
 static int rpc_mread(unifyfs_fops_ctx_t* ctx, size_t n_req, void* req)
 {
-    int ret = -ENOSYS;
+    int ret = UNIFYFS_SUCCESS;
+    int i = 0;
+    unifyfs_inode_chunk_t* chunks = NULL;
 
-    LOGDBG("%s is called but not implemented yet", __func__);
+     /* get the locations of all the read requests from the key-value store */
+    unifyfs_ReadRequest_table_t rt = unifyfs_ReadRequest_as_root(req);
+    unifyfs_Extent_vec_t extents = unifyfs_ReadRequest_extents(rt);
+    size_t n_extents = unifyfs_Extent_vec_len(extents);
+
+    if (n_extents != n_req) {
+        LOGERR("request buffer is corrupted/invalid");
+        return EINVAL;
+    }
+
+    chunks = calloc(n_req, sizeof(*chunks));
+    if (!chunks) {
+        LOGERR("failed to allocate the chunk request");
+        return ENOMEM;
+    }
+
+    for (i = 0; i < n_extents; i++) {
+        unifyfs_inode_chunk_t* ch = &chunks[i];
+
+        ch->gfid = unifyfs_Extent_fid(unifyfs_Extent_vec_at(extents, i));
+        ch->offset = unifyfs_Extent_offset(unifyfs_Extent_vec_at(extents, i));
+        ch->length = unifyfs_Extent_length(unifyfs_Extent_vec_at(extents, i));
+    }
+
+    ret = submit_read_request(ctx, n_req, chunks);
+
+    if (chunks) {
+        free(chunks);
+        chunks = NULL;
+    }
 
     return ret;
 }

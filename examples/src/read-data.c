@@ -40,7 +40,7 @@ static char filename[PATH_MAX];
 static char mountpoint[PATH_MAX];
 
 static char* buf;
-static unsigned int bufsize;
+static size_t bufsize;
 
 static int parse_line(char* line, unsigned long* offset, unsigned long* length)
 {

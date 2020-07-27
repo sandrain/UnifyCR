@@ -185,6 +185,8 @@ static inline int unifyfs_fops_read(unifyfs_fops_ctx_t* ctx,
         return ENOSYS;
     }
 
+    LOGDBG("redirecting fops_read (fops_tab: %s)", global_fops_tab->name);
+
     return global_fops_tab->read(ctx, gfid, offset, len);
 }
 

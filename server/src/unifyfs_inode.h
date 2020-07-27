@@ -140,6 +140,14 @@ int unifyfs_inode_get_filesize(int gfid, size_t* offset);
  */
 int unifyfs_inode_laminate(int gfid);
 
+struct unifyfs_inode_chunk {
+    int gfid;
+    unsigned long offset;
+    unsigned long length;
+};
+
+typedef struct unifyfs_inode_chunk unifyfs_inode_chunk_t;
+
 /**
 * @brief
 *
@@ -157,6 +165,34 @@ int unifyfs_inode_get_chunk_list(
     unsigned long len,
     unsigned int* n_chunks,
     chunk_read_req_t** chunks);
+
+/**
+ * @brief
+ *
+ * @param chunk_request
+ * @param n_chunks
+ * @param chunks
+ *
+ * @return
+ */
+static inline int unifyfs_inode_resolve_chunk_request(
+    unifyfs_inode_chunk_t* chunk_request,
+    unsigned int* n_chunks,
+    chunk_read_req_t** chunks)
+{
+    int ret = EINVAL;
+
+    if (chunk_request) {
+        int gfid = chunk_request->gfid;
+        unsigned long offset = chunk_request->offset;
+        unsigned long length = chunk_request->length;
+
+        ret = unifyfs_inode_get_chunk_list(gfid, offset, length,
+                                           n_chunks, chunks);
+    }
+
+    return ret;
+}
 
 /**
  * @brief calls extents_tree_span, which will do:

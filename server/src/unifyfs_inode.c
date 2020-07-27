@@ -462,6 +462,15 @@ int unifyfs_inode_get_chunk_list(
 out_unlock_tree:
     unifyfs_inode_tree_unlock(global_inode_tree);
 
+    if (ret == UNIFYFS_SUCCESS) {
+        unsigned int i;
+
+        /* extent_tree_get_chunk_list does not populate the gfid field */
+        for (i = 0; i < *n_chunks; i++) {
+            (*chunks)[i].gfid = gfid;
+        }
+    }
+
     return ret;
 }
 
