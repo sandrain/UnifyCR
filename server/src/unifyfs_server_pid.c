@@ -197,36 +197,34 @@ int unifyfs_publish_server_pids(void)
         pthread_mutex_lock(&server_pid_mutex);
         server_pids[0] = server_pid;
 
-        if (glb_pmi_size > 1) {
-            /* keep checking count of reported servers until all have reported
-             * or we hit the timeout */
-            do {
-                int count = 0;
-                for (int i = 0; i < glb_pmi_size; i++) {
-                    if (server_pids[i] > 0) {
-                        count++;
-                    }
+        /* keep checking count of reported servers until all have reported
+         * or we hit the timeout */
+        do {
+            int count = 0;
+            for (int i = 0; i < glb_pmi_size; i++) {
+                if (server_pids[i] > 0) {
+                    count++;
                 }
-                if (count == glb_pmi_size) {
-                    ret = create_server_pid_file();
-                    if (UNIFYFS_SUCCESS == ret) {
-                        LOGDBG("servers ready to accept client connections");
-                    }
-                    break;
+            }
+            if (count == glb_pmi_size) {
+                ret = create_server_pid_file();
+                if (UNIFYFS_SUCCESS == ret) {
+                    LOGDBG("servers ready to accept client connections");
                 }
-                ret = pthread_cond_timedwait(&server_pid_cond,
-                                             &server_pid_mutex,
-                                             &server_pid_timeout);
-                if (ETIMEDOUT == ret) {
-                    LOGERR("some servers failed to initialize within timeout");
-                    break;
-                } else if (ret) {
-                    LOGERR("failed to wait on condition (err=%d, %s)",
-                           errno, strerror(errno));
-                    break;
-                }
-            } while (1);
-        }
+                break;
+            }
+            ret = pthread_cond_timedwait(&server_pid_cond,
+                                         &server_pid_mutex,
+                                         &server_pid_timeout);
+            if (ETIMEDOUT == ret) {
+                LOGERR("some servers failed to initialize within timeout");
+                break;
+            } else if (ret) {
+                LOGERR("failed to wait on condition (err=%d, %s)",
+                       errno, strerror(errno));
+                break;
+            }
+        } while (1);
 
         free(server_pids);
         server_pids = NULL;
