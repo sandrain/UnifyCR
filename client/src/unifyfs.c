@@ -1459,18 +1459,21 @@ int unifyfs_get_global_file_meta(int gfid, unifyfs_file_attr_t* gfattr)
 int unifyfs_set_global_file_meta_from_fid(int fid, int create)
 {
     /* initialize an empty file attributes structure */
-    unifyfs_file_attr_t fattr = {0};
+    unifyfs_file_attr_t fattr;
+    memset(&fattr, 0, sizeof(fattr));
 
     /* lookup local metadata for file */
     unifyfs_filemeta_t* meta = unifyfs_get_meta_from_fid(fid);
     assert(meta != NULL);
 
-    /* copy our file name */
-    const char* path = unifyfs_path_from_fid(fid);
-    sprintf(fattr.filename, "%s", path);
+    /* get file name */
+    fattr.filename = (char*) unifyfs_path_from_fid(fid);
 
     /* set global file id */
     fattr.gfid = meta->gfid;
+
+    LOGDBG("setting global file metadata for fid:%d gfid:%d path:%s",
+           fid, fattr.gfid, fattr.filename);
 
     /* use current time for atime/mtime/ctime */
     struct timespec tp = {0};

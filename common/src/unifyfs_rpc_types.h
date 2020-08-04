@@ -15,72 +15,31 @@
 #ifndef __UNIFYFS_RPC_TYPES_H
 #define __UNIFYFS_RPC_TYPES_H
 
-#include <time.h>
 #include <margo.h>
-#include <mercury.h>
 #include <mercury_proc_string.h>
-#include <mercury_types.h>
+#include <time.h>
+
 #include "unifyfs_meta.h"
 
-/* need to transfer timespec structs */
+/* rpc encode/decode for timespec structs */
 typedef struct timespec sys_timespec_t;
 MERCURY_GEN_STRUCT_PROC(sys_timespec_t,
-                        ((uint64_t)(tv_sec))
-                        ((uint64_t)(tv_nsec)))
+    ((uint64_t)(tv_sec))
+    ((uint64_t)(tv_nsec))
+)
 
-/* encode/decode unifyfs_file_attr_t */
-static inline
-hg_return_t hg_proc_unifyfs_file_attr_t(hg_proc_t proc, void* _attr)
-{
-    int i = 0;
-    unifyfs_file_attr_t* attr = (unifyfs_file_attr_t *) _attr;
-    hg_return_t ret = HG_SUCCESS;
-
-    switch (hg_proc_get_op(proc))
-    {
-    case HG_ENCODE:
-        ret = hg_proc_int32_t(proc, &attr->gfid);
-        for (i = 0; i < UNIFYFS_MAX_FILENAME; i++) {
-            ret |= hg_proc_int8_t(proc, &(attr->filename[i]));
-        }
-        ret |= hg_proc_int32_t(proc, &attr->mode);
-        ret |= hg_proc_int32_t(proc, &attr->uid);
-        ret |= hg_proc_int32_t(proc, &attr->gid);
-        ret |= hg_proc_uint64_t(proc, &attr->size);
-        ret |= hg_proc_sys_timespec_t(proc, &attr->atime);
-        ret |= hg_proc_sys_timespec_t(proc, &attr->mtime);
-        ret |= hg_proc_sys_timespec_t(proc, &attr->ctime);
-        ret |= hg_proc_uint32_t(proc, &attr->is_laminated);
-        if (ret != HG_SUCCESS) {
-            ret = HG_PROTOCOL_ERROR;
-        }
-        break;
-
-    case HG_DECODE:
-        ret = hg_proc_int32_t(proc, &attr->gfid);
-        for (i = 0; i < UNIFYFS_MAX_FILENAME; i++) {
-            ret |= hg_proc_int8_t(proc, &(attr->filename[i]));
-        }
-        ret |= hg_proc_int32_t(proc, &attr->mode);
-        ret |= hg_proc_int32_t(proc, &attr->uid);
-        ret |= hg_proc_int32_t(proc, &attr->gid);
-        ret |= hg_proc_uint64_t(proc, &attr->size);
-        ret |= hg_proc_sys_timespec_t(proc, &attr->atime);
-        ret |= hg_proc_sys_timespec_t(proc, &attr->mtime);
-        ret |= hg_proc_sys_timespec_t(proc, &attr->ctime);
-        ret |= hg_proc_uint32_t(proc, &attr->is_laminated);
-        if (ret != HG_SUCCESS) {
-            ret = HG_PROTOCOL_ERROR;
-        }
-        break;
-
-    case HG_FREE:
-    default:
-        /* nothing */
-        break;
-    }
-
-    return ret;
-}
+/* rpc encode/decode for unifyfs_file_attr_t */
+MERCURY_GEN_STRUCT_PROC(unifyfs_file_attr_t,
+    ((int32_t)(gfid))
+    ((int32_t)(mode))
+    ((int32_t)(uid))
+    ((int32_t)(gid))
+    ((uint32_t)(is_laminated))
+    ((hg_size_t)(size))
+    ((sys_timespec_t)(atime))
+    ((sys_timespec_t)(ctime))
+    ((sys_timespec_t)(mtime))
+    ((hg_const_string_t)(filename))
+)
 
 #endif /* __UNIFYFS_RPC_TYPES_H */

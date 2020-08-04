@@ -320,10 +320,11 @@ int invoke_client_metaset_rpc(int create, unifyfs_file_attr_t* f_meta)
     /* fill in input struct */
     unifyfs_metaset_in_t in;
     in.create       = (int32_t) create;
-    in.attr         = *f_meta;
+    memcpy(&(in.attr), f_meta, sizeof(*f_meta));
 
     /* call rpc function */
-    LOGDBG("invoking the metaset rpc function in client");
+    LOGDBG("invoking the metaset rpc function in client - gfid:%d file:%s",
+           in.attr.gfid, in.attr.filename);
     hg_return_t hret = margo_forward(handle, &in);
     assert(hret == HG_SUCCESS);
 

@@ -54,8 +54,8 @@ typedef struct {
 
 /* UnifyFS file attributes */
 typedef struct {
+    char* filename;
     int gfid;
-    char filename[UNIFYFS_MAX_FILENAME];
 
     /* essential stat fields */
     uint32_t mode;   /* st_mode bits */
@@ -83,6 +83,7 @@ static inline int unifyfs_file_attr_set_invalid(unifyfs_file_attr_t* attr)
         return EINVAL;
     }
 
+    attr->filename = NULL;
     attr->gfid = -1;
     attr->mode = -1;
     attr->uid = -1;
@@ -92,8 +93,6 @@ static inline int unifyfs_file_attr_set_invalid(unifyfs_file_attr_t* attr)
     attr->mtime.tv_sec = (uint64_t) -1;
     attr->ctime.tv_sec = (uint64_t) -1;
     attr->is_laminated = -1;
-
-    attr->filename[0] = '\0';
 
     return 0;
 }
@@ -154,7 +153,7 @@ unifyfs_file_attr_update(unifyfs_file_attr_t* dst, unifyfs_file_attr_t* src)
 
     /* FIXME: is this necessary? */
     if (src->filename && !strcmp(dst->filename, src->filename)) {
-        sprintf(dst->filename, "%s", src->filename);
+        dst->filename = strdup(src->filename);
     }
 
     return 0;

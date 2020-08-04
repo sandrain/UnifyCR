@@ -210,7 +210,7 @@ static void unifyfs_metaget_rpc(hg_handle_t handle)
     /* given the global file id, look up file attributes
      * from key/value store */
     unifyfs_file_attr_t attr_val;
-
+    memset(&attr_val, 0, sizeof(attr_val));
     int ret = unifyfs_fops_metaget(NULL, in.gfid, &attr_val);
 
     /* build our output values */

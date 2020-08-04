@@ -43,6 +43,7 @@ struct unifyfs_inode* unifyfs_inode_alloc(int gfid, unifyfs_file_attr_t* attr)
     if (ino) {
         ino->gfid = gfid;
         ino->attr = *attr;
+        ino->attr.filename = strdup(attr->filename);
         pthread_rwlock_init(&ino->rwlock, NULL);
     }
 
@@ -54,7 +55,11 @@ static inline int unifyfs_inode_destroy(struct unifyfs_inode* ino)
     int ret = 0;
 
     if (ino) {
-        if (ino->extents) {
+        if (NULL != ino->attr.filename) {
+            free(ino->attr.filename);
+        }
+
+        if (NULL != ino->extents) {
             extent_tree_destroy(ino->extents);
             free(ino->extents);
         }
